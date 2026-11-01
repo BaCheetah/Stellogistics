@@ -1,2 +1,68 @@
 # Stellogistics
-A smart Dyson Sphere Program Logistics Helper Mod
+
+**Stop hunting through dozens of individual ILS towers to figure out why your factory stalled.**
+
+**Stellogistics** is a quality-of-life mod for *Dyson Sphere Program* (BepInEx 5) that adds an interactive, customizable **Interstellar Logistics Overview Panel** directly onto the Starmap. Instead of inspecting Interplanetary Logistics Stations (ILS) one by one, Stellogistics aggregates every remote supply and demand slot across an entire **Planet** or **Star System** into a single, combined **Exports** and **Imports** dashboard.
+
+---
+
+## Why Stellogistics? (The Problem It Solves)
+
+In mid-to-late game *Dyson Sphere Program*, a single star system can easily host 20–60+ Interplanetary Logistics Stations and dozens of Orbital Collectors across multiple planets. When a production chain slows down across the cluster:
+- You don't want to click through 50 individual towers just to find out whether a planet is **exporting** or **importing** an item.
+- You need to know immediately if a mining/smelting outpost has **run dry (`EMPTY 0%`)** or if a factory world is **starved for inputs (`STARVED 0%`)**.
+- You want to filter out noisy items (like ubiquitous building malls or warpers) on specific worlds while keeping them visible on others.
+
+**Stellogistics** gives you that macro-level visibility right from the Starmap—whether you're hovering over distant stars or inspecting a specific planet.
+
+---
+
+## Key Features
+
+### 1. Combined Planet & Star System Logistics
+- **One Row Per Item**: Combines all Remote Supply (**Exports**) and Remote Demand (**Imports**) slots for the same item across the selected Planet or Star System.
+- **Complete Capacity & Transit Breakdown**: Shows `Stored / Max` capacity, fill percentage, active in-transit vessel cargo (`+` inbound / `-` outbound), number of planets involved, and total station slots (`ILS` + Gas Giant Orbital Collectors `OC`).
+- **Fleet & Warper Readiness**: Header displays total ILS & Orbital Collector counts, idle vs. total Logistics Vessels, and available Space Warpers.
+
+### 2. Instant Bottleneck & Shortage Detection
+- **Color-Coded Health Bars & Badges**:
+  - **Red (`EMPTY` / `STARVED` / `LOW`, ≤15%)**: Critical bottleneck—an export source has run out of stock to ship, or an import destination is starved.
+  - **Orange (`LOW`, ≤40%)**: Stock is depleting and approaching a shortage.
+  - **Green (>40%)**: Healthy buffer.
+- **Section Header Alert Counters**: Even when the Exports or Imports sections are collapsed, the header displays instant alert tallies (e.g., `2 EMPTY • 1 LOW` or `ALL OK`).
+- **One-Click Sorting (`Sort: Alert` / `Sort: ID` / `Sort: Amt`)**: Defaults to sorting the most critical shortages straight to the top of your list.
+
+### 3. Smart Star System Trade Modes
+When viewing a whole **Star System**, cycle between three aggregation modes:
+- **`Ext Only` (Interstellar Smart)**: Automatically hides purely local intra-system shuttling (e.g. Planet A mining ore for Planet B's smelters inside the same system, or stations limited to `< 1 LY` range) so you only see true interstellar imports and exports.
+- **`Netted` (Net Intra-System)**: Nets internal star system supply against internal demand.
+- **`All Slots`**: Displays every remote supply and demand slot across all planets in the system.
+
+### 4. Per-Star & Per-Planet Saved Item Filters (`Filter ▾`)
+Every Star System and Planet remembers its own filter configuration across game sessions:
+- **6 Quick Category Checkboxes**: Quickly toggle *Raw Resources (Ores, Gas)*, *Materials & Ingots*, *Components & Parts*, *Buildings & Structures*, *Fuel, Warpers & Vessels*, and *Science Matrices*.
+- **Spoiler-Free `14 × 8` Custom Item & Building Picker (`Custom`)**:
+  - Modeled after DSP's native item grid with **Items** and **Buildings** tabs, plus **`✓ Check All`** and **`✕ Uncheck All`** bulk action buttons.
+  - **Spoiler-Free**: Automatically hides items and buildings that don't have storage anywhere in your galaxy yet, so unresearched tech is never spoiled.
+  - **Smart Placement**: Automatically opens to the right or left of the main panel depending on available screen space, and can also be dragged independently.
+
+### 5. Flexible, Unobtrusive Window Management
+- **Freely Draggable**: Drag the panel anywhere on screen—even partially off-screen—without restrictive boundary snapping.
+- **Lower-Right Resize Grip (`◢`)**:
+  - Freely resize both width and height.
+  - **Multi-Stage Drag Collapsing**: Dragging the resize grip upward smoothly collapses the Exports/Imports lists first, and dragging all the way up collapses the entire window into a compact **`Stellogistics` taskbar tab**.
+- **Scroll-Safe**: Scrolling through long item lists or hovering the Stellogistics UI automatically blocks Starmap camera zooming and prevents background 3D planets from stealing focus.
+
+---
+
+## Configuration
+
+A configuration file is generated at `BepInEx/config/com.stellogistics.dsp.cfg` after first launch, storing your custom panel layout, thresholds, and saved per-star/per-planet filters.
+
+## Building from Source
+
+```powershell
+dotnet build -c Release
+```
+
+Building automatically creates a Thunderstore-ready package archive in `dist/Stellogistics-1.0.0.zip`.

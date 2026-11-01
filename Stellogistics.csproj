@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Stellogistics</AssemblyName>
+    <Description>Shows combined Interplanetary Logistics (ILS) imports and exports per planet and star system on the Starmap.</Description>
+    <Version>1.0.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <RootNamespace>Stellogistics</RootNamespace>
+    <ThunderstoreProfilePluginsDir>E:\Thunderstore Data\DysonSphereProgram\profiles\Default\BepInEx\plugins\FlorianSchlieper-Stellogistics</ThunderstoreProfilePluginsDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="DysonSphereProgram.GameLibs" Version="*-*" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="UnityEngine.Modules" Version="2018.4.12" IncludeAssets="compile" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="PackageThunderstore" AfterTargets="Build">
+    <PropertyGroup>
+      <PackageDir>$(ProjectDir)dist\package</PackageDir>
+      <ZipFile>$(ProjectDir)dist\$(AssemblyName)-$(Version).zip</ZipFile>
+    </PropertyGroup>
+    <RemoveDir Directories="$(PackageDir)" />
+    <MakeDir Directories="$(PackageDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageDir)" />
+    <Copy SourceFiles="$(ProjectDir)thunderstore\manifest.json" DestinationFolder="$(PackageDir)" />
+    <Copy SourceFiles="$(ProjectDir)thunderstore\icon.png" DestinationFolder="$(PackageDir)" />
+    <Copy SourceFiles="$(ProjectDir)README.md" DestinationFolder="$(PackageDir)" />
+    <Copy SourceFiles="$(ProjectDir)CHANGELOG.md" DestinationFolder="$(PackageDir)" />
+    <ZipDirectory SourceDirectory="$(PackageDir)" DestinationFile="$(ZipFile)" Overwrite="true" />
+    <Message Importance="High" Text="Packaged Thunderstore archive -> $(ZipFile)" />
+  </Target>
+
+</Project>
