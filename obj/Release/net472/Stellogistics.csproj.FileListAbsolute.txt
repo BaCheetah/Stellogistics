@@ -11,3 +11,4 @@ E:\Florian Schlieper\Documents\Stellogistics\obj\Release\net472\Stellogistics.cs
 E:\Florian Schlieper\Documents\Stellogistics\obj\Release\net472\Stellogi.2A512BD0.Up2Date
 E:\Florian Schlieper\Documents\Stellogistics\obj\Release\net472\Stellogistics.dll
 E:\Florian Schlieper\Documents\Stellogistics\obj\Release\net472\Stellogistics.pdb
+E:\Florian Schlieper\Documents\Stellogistics\obj\Release\net472\Stellogistics.sourcelink.json

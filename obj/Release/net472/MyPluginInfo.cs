@@ -4,6 +4,6 @@ namespace Stellogistics
     {
         public const string PLUGIN_GUID = "Stellogistics";
         public const string PLUGIN_NAME = "Stellogistics";
-        public const string PLUGIN_VERSION = "1.0.0";
+        public const string PLUGIN_VERSION = "1.1.0";
     }
 }

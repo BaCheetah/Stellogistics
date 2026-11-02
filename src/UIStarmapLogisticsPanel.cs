@@ -236,6 +236,8 @@ namespace Stellogistics
         private GameObject _optionsMenuGo;
         private RectTransform _optionsMenuRect;
         private Text _optionsTargetLabel;
+        private Text _excludeRowLabelText;
+        private Text _excludeThresholdBtnText;
         private readonly List<FilterToggleRow> _filterToggles = new List<FilterToggleRow>();
 
         private GameObject _customPickerGo;
@@ -709,7 +711,7 @@ namespace Stellogistics
             _optionsMenuRect.anchorMax = new Vector2(1f, 1f);
             _optionsMenuRect.pivot = new Vector2(1f, 1f);
             _optionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
-            _optionsMenuRect.sizeDelta = new Vector2(236f, 246f);
+            _optionsMenuRect.sizeDelta = new Vector2(236f, 278f);
 
             _optionsHoverTracker = _optionsMenuGo.GetComponent<PointerHoverTracker>();
 
@@ -735,7 +737,7 @@ namespace Stellogistics
             _optionsTargetLabel.rectTransform.pivot = new Vector2(0f, 1f);
             _optionsTargetLabel.rectTransform.anchoredPosition = new Vector2(10f, -26f);
             _optionsTargetLabel.rectTransform.sizeDelta = new Vector2(-20f, 16f);
-            _optionsTargetLabel.text = "Saved for current Star / Planet";
+            _optionsTargetLabel.text = "Global Filter (All Stars & Planets)";
 
             (EItemCategoryFilter cat, string label)[] categories = new[]
             {
@@ -755,6 +757,42 @@ namespace Stellogistics
                 _filterToggles.Add(toggleRow);
                 y -= 26f;
             }
+
+            // Thin divider before status/fill filter
+            GameObject divGo = new GameObject("StatusFilterDivider", typeof(RectTransform), typeof(Image));
+            divGo.transform.SetParent(_optionsMenuRect, false);
+            RectTransform divRect = divGo.GetComponent<RectTransform>();
+            divRect.anchorMin = new Vector2(0f, 1f);
+            divRect.anchorMax = new Vector2(1f, 1f);
+            divRect.pivot = new Vector2(0.5f, 1f);
+            divRect.anchoredPosition = new Vector2(0f, y - 2f);
+            divRect.sizeDelta = new Vector2(-16f, 1f);
+            Image divImg = divGo.GetComponent<Image>();
+            divImg.color = new Color(0.28f, 0.50f, 0.72f, 0.45f);
+            divImg.raycastTarget = false;
+            y -= 6f;
+
+            FilterToggleRow exclude100Row = CreateFilterToggleRow(_optionsMenuRect, EItemCategoryFilter.Exclude100Percent, "Exclude ≥90% (Full/Tapped)", y);
+            _excludeRowLabelText = exclude100Row.LabelText;
+            _excludeRowLabelText.rectTransform.offsetMax = new Vector2(-50f, 0f);
+            _filterToggles.Add(exclude100Row);
+
+            RectTransform excludeRowRect = exclude100Row.Btn.GetComponent<RectTransform>();
+            Button threshBtn = CreateHeaderButton("BtnExcludeThreshold", excludeRowRect, new Vector2(-3f, -2f), new Vector2(44f, 20f), true, out _excludeThresholdBtnText);
+            _excludeThresholdBtnText.text = "≥90%";
+            threshBtn.onClick.AddListener(() =>
+            {
+                int cur = _config.ExcludeFullThresholdPercent.Value;
+                int next = cur >= 100 ? 41 : (cur >= 90 ? 100 : 90);
+                _config.ExcludeFullThresholdPercent.Value = next;
+                if (!_config.GetExclude100PercentForAstro(_lastGalaxySeed, _lastTargetAstroId))
+                {
+                    _config.ToggleExclude100PercentForAstro(_lastGalaxySeed, _lastTargetAstroId);
+                }
+                RefreshOptionsMenuState();
+                _forceRefresh = true;
+            });
+            y -= 26f;
 
             Button resetFiltersBtn = CreateHeaderButton("BtnResetFilters", _optionsMenuRect, new Vector2(-150f, y - 6f), new Vector2(78f, 22f), true, out Text resetFiltersTxt);
             resetFiltersTxt.text = "Reset Filters";
@@ -1485,6 +1523,14 @@ namespace Stellogistics
 
         private void OnCategoryToggleClicked(EItemCategoryFilter category)
         {
+            if (category == EItemCategoryFilter.Exclude100Percent)
+            {
+                _config.ToggleExclude100PercentForAstro(_lastGalaxySeed, _lastTargetAstroId);
+                RefreshOptionsMenuState();
+                _forceRefresh = true;
+                return;
+            }
+
             EItemCategoryFilter current = _config.GetFilterForAstro(_lastGalaxySeed, _lastTargetAstroId);
             EItemCategoryFilter updated = (current & category) != 0
                 ? (current & ~category)
@@ -1511,8 +1557,28 @@ namespace Stellogistics
             EItemCategoryFilter mask = _config.GetFilterForAstro(_lastGalaxySeed, _lastTargetAstroId);
             bool hasCustom = _config.HasCustomFilterForAstro(_lastGalaxySeed, _lastTargetAstroId);
             _optionsTargetLabel.text = hasCustom
-                ? $"{_lastTargetDisplayName} (Saved)"
-                : $"{_lastTargetDisplayName} (Default)";
+                ? "Global Filter (Active across Starmap)"
+                : "Global Filter (All Shown)";
+
+            int thresh = _config.ExcludeFullThresholdPercent.Value;
+            if (_excludeRowLabelText != null && _excludeThresholdBtnText != null)
+            {
+                if (thresh >= 100)
+                {
+                    _excludeRowLabelText.text = "Exclude 100% Entries";
+                    _excludeThresholdBtnText.text = "100%";
+                }
+                else if (thresh >= 90)
+                {
+                    _excludeRowLabelText.text = "Exclude ≥90% (Tapped)";
+                    _excludeThresholdBtnText.text = "≥90%";
+                }
+                else
+                {
+                    _excludeRowLabelText.text = "Exclude >40% (Healthy)";
+                    _excludeThresholdBtnText.text = ">40%";
+                }
+            }
 
             for (int i = 0; i < _filterToggles.Count; i++)
             {
@@ -1738,7 +1804,7 @@ namespace Stellogistics
             {
                 ESortOrder.ShortageFirst => "Sort: Alert",
                 ESortOrder.ItemId => "Sort: ID",
-                _ => "Sort: Amt"
+                _ => "Sort: Pct ↓"
             };
 
             if (!_scrollRect.gameObject.activeSelf)
@@ -1961,7 +2027,7 @@ namespace Stellogistics
                 ? new Color(0.92f, 0.99f, 0.94f, 1f)
                 : accentColor;
 
-            int pct = Mathf.RoundToInt(item.FillRatio * 100f);
+            int pct = item.DisplayPercent;
             string statusTag = "";
             if (status == EHealthStatus.Critical)
             {

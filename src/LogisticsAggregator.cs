@@ -457,11 +457,15 @@ namespace Stellogistics
         {
             int critPct = config.CriticalThresholdPercent.Value;
             int warnPct = config.WarningThresholdPercent.Value;
+            int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
             ESortOrder sortOrder = config.SortOrder.Value;
+            bool excludeFull = config.GetExclude100PercentForAstro(summary.GalaxySeed, summary.TargetAstroId);
 
             foreach (CombinedLogisticsItem item in exportsByItem.Values)
             {
-                if (!config.IsItemVisibleForAstro(summary.GalaxySeed, summary.TargetAstroId, item.ItemId, item.Category))
+                bool isFullOrTapped = item.DisplayPercent >= excludeThresholdPct;
+                if (!config.IsItemVisibleForAstro(summary.GalaxySeed, summary.TargetAstroId, item.ItemId, item.Category) ||
+                    (excludeFull && isFullOrTapped))
                 {
                     summary.FilteredOutItemCount++;
                     continue;
@@ -474,7 +478,9 @@ namespace Stellogistics
 
             foreach (CombinedLogisticsItem item in importsByItem.Values)
             {
-                if (!config.IsItemVisibleForAstro(summary.GalaxySeed, summary.TargetAstroId, item.ItemId, item.Category))
+                bool isFullOrTapped = item.DisplayPercent >= excludeThresholdPct;
+                if (!config.IsItemVisibleForAstro(summary.GalaxySeed, summary.TargetAstroId, item.ItemId, item.Category) ||
+                    (excludeFull && isFullOrTapped))
                 {
                     summary.FilteredOutItemCount++;
                     continue;
@@ -489,20 +495,34 @@ namespace Stellogistics
             {
                 if (sortOrder == ESortOrder.ShortageFirst)
                 {
-                    EHealthStatus sa = a.GetHealthStatus(critPct, warnPct);
-                    EHealthStatus sb = b.GetHealthStatus(critPct, warnPct);
-                    if (sa != sb)
+                    int pctCmp = a.DisplayPercent.CompareTo(b.DisplayPercent);
+                    if (pctCmp != 0)
                     {
-                        return sa.CompareTo(sb);
+                        return pctCmp;
                     }
                     int ratioCmp = a.FillRatio.CompareTo(b.FillRatio);
                     if (ratioCmp != 0)
                     {
                         return ratioCmp;
                     }
+                    int maxCmp = b.MaxCount.CompareTo(a.MaxCount);
+                    if (maxCmp != 0)
+                    {
+                        return maxCmp;
+                    }
                 }
                 else if (sortOrder == ESortOrder.StoredAmountDesc)
                 {
+                    int pctCmp = b.DisplayPercent.CompareTo(a.DisplayPercent);
+                    if (pctCmp != 0)
+                    {
+                        return pctCmp;
+                    }
+                    int ratioCmp = b.FillRatio.CompareTo(a.FillRatio);
+                    if (ratioCmp != 0)
+                    {
+                        return ratioCmp;
+                    }
                     int amtCmp = b.StoredCount.CompareTo(a.StoredCount);
                     if (amtCmp != 0)
                     {

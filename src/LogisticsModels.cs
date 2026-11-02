@@ -39,72 +39,43 @@ namespace Stellogistics
             }
         }
 
-        public float EffectiveFillRatio
+        public int DisplayPercent
         {
             get
             {
                 if (MaxCount <= 0)
                 {
-                    return StoredCount > 0 ? 1f : 0f;
+                    return StoredCount > 0 ? 100 : 0;
                 }
-                if (Logic == ELogisticStorage.Supply)
+                if (StoredCount <= 0)
                 {
-                    long available = Math.Max(0L, StoredCount + InTransitOrder);
-                    return Mathf.Clamp01((float)available / MaxCount);
+                    return 0;
                 }
-                else
+                if (StoredCount >= MaxCount)
                 {
-                    return Mathf.Clamp01((float)StoredCount / MaxCount);
+                    return 100;
                 }
+                return Mathf.Clamp(Mathf.RoundToInt((float)StoredCount / MaxCount * 100f), 1, 99);
             }
         }
 
         public EHealthStatus GetHealthStatus(int criticalThresholdPct, int warningThresholdPct)
         {
-            float crit = Mathf.Clamp01(criticalThresholdPct / 100f);
-            float warn = Mathf.Clamp01(warningThresholdPct / 100f);
-
             if (MaxCount <= 0)
             {
                 return StoredCount > 0 ? EHealthStatus.Healthy : EHealthStatus.Critical;
             }
 
-            float ratio = FillRatio;
-            if (Logic == ELogisticStorage.Supply)
+            int pct = DisplayPercent;
+            if (StoredCount <= 0 || pct <= criticalThresholdPct)
             {
-                float effRatio = EffectiveFillRatio;
-                float checkRatio = Mathf.Min(ratio, effRatio);
-                if (StoredCount == 0 || checkRatio <= crit)
-                {
-                    return EHealthStatus.Critical;
-                }
-                if (checkRatio <= warn)
-                {
-                    return EHealthStatus.Warning;
-                }
-                return EHealthStatus.Healthy;
+                return EHealthStatus.Critical;
             }
-            else
+            if (pct <= warningThresholdPct)
             {
-                if (StoredCount == 0 || ratio <= crit)
-                {
-                    float withTransit = Mathf.Clamp01((float)(StoredCount + Math.Max(0L, InTransitOrder)) / MaxCount);
-                    if (StoredCount == 0 && InTransitOrder <= 0)
-                    {
-                        return EHealthStatus.Critical;
-                    }
-                    if (withTransit <= crit)
-                    {
-                        return EHealthStatus.Critical;
-                    }
-                    return ratio == 0f ? EHealthStatus.Critical : EHealthStatus.Warning;
-                }
-                if (ratio <= warn)
-                {
-                    return EHealthStatus.Warning;
-                }
-                return EHealthStatus.Healthy;
+                return EHealthStatus.Warning;
             }
+            return EHealthStatus.Healthy;
         }
 
         public static EItemCategoryFilter ClassifyItem(ItemProto proto)

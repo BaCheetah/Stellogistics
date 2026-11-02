@@ -6,6 +6,8 @@
 
 **Stellogistics** is a quality-of-life mod for *Dyson Sphere Program* (BepInEx 5) that adds an interactive, customizable **Interstellar Logistics Overview Panel** directly onto the Starmap. Instead of inspecting Interplanetary Logistics Stations (ILS) one by one, Stellogistics aggregates every remote supply and demand slot across an entire **Planet** or **Star System** into a single, combined **Exports** and **Imports** dashboard.
 
+- **Source Code**: https://github.com/BaCheetah/Stellogistics
+
 ---
 
 ## Why Stellogistics? (The Problem It Solves)
@@ -40,9 +42,10 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
 - **`Netted` (Net Intra-System)**: Nets internal star system supply against internal demand.
 - **`All Slots`**: Displays every remote supply and demand slot across all planets in the system.
 
-### 4. Per-Star & Per-Planet Saved Item Filters (`Filter ▾`)
-Every Star System and Planet remembers its own filter configuration across game sessions:
+### 4. Global Item & Status Filters (`Filter ▾`)
+Filter settings apply globally across the entire Starmap so you can isolate a single item (e.g. via `✕ Uncheck All` → click item) and rapidly scan across planets and star systems to find where it is exported or imported:
 - **6 Quick Category Checkboxes**: Quickly toggle *Raw Resources (Ores, Gas)*, *Materials & Ingots*, *Components & Parts*, *Buildings & Structures*, *Fuel, Warpers & Vessels*, and *Science Matrices*.
+- **Exclude Full / Freshly-Tapped Storages (`≥90%` / `100%` / `>40%`)**: Hide full or freshly-tapped export/import storages so you can focus exclusively on active bottlenecks.
 - **Spoiler-Free `14 × 8` Custom Item & Building Picker (`Custom`)**:
   - Modeled after DSP's native item grid with **Items** and **Buildings** tabs, plus **`✓ Check All`** and **`✕ Uncheck All`** bulk action buttons.
   - **Spoiler-Free**: Automatically hides items and buildings that don't have storage anywhere in your galaxy yet, so unresearched tech is never spoiled.
@@ -90,7 +93,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-1.0.0.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-1.1.0.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-1.0.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-1.1.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).
