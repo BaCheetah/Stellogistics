@@ -3373,7 +3373,7 @@ namespace Stellogistics
             _subtitleText.text = (onlyBottlenecks && summary.CheckedItemCount != 1)
                 ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}{pausedSuffix}"
                 : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}{pausedSuffix}";
-            _fleetInfoText.text = "Click row to focus & pin • [✕] to hide item";
+            _fleetInfoText.text = "Click row to focus & pin • ✕ to hide item";
 
             _sortModeBtnText.text = _config.SortOrder.Value switch
             {
