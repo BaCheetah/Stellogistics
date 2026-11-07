@@ -822,7 +822,7 @@ namespace Stellogistics
                 }
 
                 _config.PanelWidth.Value = newW;
-                bool showFifthBtn = _finderModeActive || (_lastResolvedStar != null && _lastResolvedPlanet == null);
+                bool showFifthBtn = !_finderModeActive && (_lastResolvedStar != null && _lastResolvedPlanet == null);
                 float activeHeaderH = ApplyHeaderLayout(newW, showFifthBtn);
                 float clampedViewportH = Mathf.Clamp(newTotalH - activeHeaderH, 82f, 950f);
                 _config.PanelMaxHeight.Value = clampedViewportH;
@@ -905,7 +905,7 @@ namespace Stellogistics
                 return;
             }
 
-            bool showFifthBtn = _finderModeActive || (_lastResolvedStar != null && _lastResolvedPlanet == null);
+            bool showFifthBtn = !_finderModeActive && (_lastResolvedStar != null && _lastResolvedPlanet == null);
             float activeHeaderH = ApplyHeaderLayout(panelWidth, showFifthBtn);
 
             bool bothMenusCollapsed = _exportsCollapsed && _importsCollapsed;
@@ -2461,11 +2461,6 @@ namespace Stellogistics
         private void OnFilterModeButtonClicked()
         {
             CloseDropdownMenus();
-            if (_finderModeActive)
-            {
-                ToggleCustomItemPicker();
-                return;
-            }
             int next = ((int)_config.StarSystemFilterMode.Value + 1) % 3;
             _config.StarSystemFilterMode.Value = (EStarFilterMode)next;
             _forceRefresh = true;
@@ -3328,16 +3323,11 @@ namespace Stellogistics
             float panelWidth = _config.PanelWidth.Value;
             float maxScrollHeight = _config.PanelMaxHeight.Value;
 
-            float activeHeaderH = ApplyHeaderLayout(panelWidth, true);
+            float activeHeaderH = ApplyHeaderLayout(panelWidth, false);
             _subtitleText.gameObject.SetActive(true);
             _fleetInfoText.gameObject.SetActive(true);
 
-            // In Finder mode, FilterModeBtn becomes "Pick Item" so you can easily pick another item or scan bottlenecks
-            _filterModeBtn.gameObject.SetActive(true);
-            _filterModeBtnText.text = "Pick Item";
-            _filterModeBtn.GetComponent<Image>().color = _customPickerOpen
-                ? new Color(0.24f, 0.46f, 0.70f, 0.98f)
-                : new Color(0.15f, 0.26f, 0.39f, 0.96f);
+            _filterModeBtn.gameObject.SetActive(false);
 
             _finderModeBtn.gameObject.SetActive(true);
             _lastFinderCheckedCount = summary.CheckedItemCount;
@@ -3400,7 +3390,7 @@ namespace Stellogistics
                 }
                 else if (summary.IgnoredPlanetMatchCount > 0)
                 {
-                    _emptyStateText.text = $"{summary.IgnoredPlanetMatchCount} matching planet(s) hidden by Planet Filter (Pick Item → Planets).";
+                    _emptyStateText.text = $"{summary.IgnoredPlanetMatchCount} matching planet(s) hidden by Planet Filter (Filter ▾ → Custom Picker → Planets).";
                 }
                 else
                 {
