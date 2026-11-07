@@ -3241,10 +3241,21 @@ namespace Stellogistics
                 : accentColor;
 
             int capturedItemId = item.ItemId;
-            row.ShowMuteOnHover = false;
-            row.MuteSlideProgress = 0f;
+            row.ShowMuteOnHover = true;
             ApplyRowMuteAnimationState(row);
-            row.OnMuteClick = null;
+            row.OnMuteClick = () =>
+            {
+                CloseDropdownMenus();
+                row.MuteSlideProgress = 0f;
+                if (capturedItemId > 0)
+                {
+                    _hasSavedFinderSnapshot = false;
+                    _config.SetItemVisibleForAstro(_lastGalaxySeed, _lastTargetAstroId, capturedItemId, false);
+                    RefreshCustomPickerCells();
+                    RefreshOptionsMenuState();
+                    _forceRefresh = true;
+                }
+            };
             row.OnRowClick = () =>
             {
                 CloseDropdownMenus();
@@ -3664,6 +3675,7 @@ namespace Stellogistics
             row.OnMuteClick = () =>
             {
                 CloseDropdownMenus();
+                row.MuteSlideProgress = 0f;
                 if (capturedItemId > 0)
                 {
                     if (_hasSavedFinderSnapshot)
