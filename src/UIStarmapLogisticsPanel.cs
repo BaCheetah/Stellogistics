@@ -2832,6 +2832,28 @@ namespace Stellogistics
             targetPlanet = null;
             targetStar = null;
 
+            // Do not switch target based on background 3D hover raycasts while the cursor is interacting with our UI
+            if (IsPointerOverUI() && (_lastResolvedPlanet != null || _lastResolvedStar != null))
+            {
+                targetPlanet = _lastResolvedPlanet;
+                targetStar = _lastResolvedStar;
+                return;
+            }
+
+            if (_config.ShowOnHover.Value)
+            {
+                if (starmap.mouseHoverPlanet != null && starmap.mouseHoverPlanet.planet != null)
+                {
+                    targetPlanet = starmap.mouseHoverPlanet.planet;
+                    return;
+                }
+                if (starmap.mouseHoverStar != null && starmap.mouseHoverStar.star != null)
+                {
+                    targetStar = starmap.mouseHoverStar.star;
+                    return;
+                }
+            }
+
             if (_uiGame != null)
             {
                 if (_uiGame.planetDetail != null && _uiGame.planetDetail.active && _uiGame.planetDetail.planet != null)
@@ -2855,28 +2877,6 @@ namespace Stellogistics
             {
                 targetStar = starmap.focusStar.star;
                 return;
-            }
-
-            // Do not switch target based on background 3D hover raycasts while the cursor is interacting with our UI
-            if (IsPointerOverUI() && (_lastResolvedPlanet != null || _lastResolvedStar != null))
-            {
-                targetPlanet = _lastResolvedPlanet;
-                targetStar = _lastResolvedStar;
-                return;
-            }
-
-            if (_config.ShowOnHover.Value)
-            {
-                if (starmap.mouseHoverPlanet != null && starmap.mouseHoverPlanet.planet != null)
-                {
-                    targetPlanet = starmap.mouseHoverPlanet.planet;
-                    return;
-                }
-                if (starmap.mouseHoverStar != null && starmap.mouseHoverStar.star != null)
-                {
-                    targetStar = starmap.mouseHoverStar.star;
-                    return;
-                }
             }
 
             if (starmap.viewPlanet != null)

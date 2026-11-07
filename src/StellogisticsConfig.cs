@@ -116,9 +116,9 @@ namespace Stellogistics
 
             ShowOnHover = config.Bind(
                 "Display",
-                "ShowOnHover",
-                true,
-                "Show logistics when hovering a planet or star in the Starmap even if not clicked/selected."
+                "HoverStarmapTargets",
+                false,
+                "Show logistics when hovering a planet or star in the Starmap (Default: false)."
             );
 
             ShowInTransitBar = config.Bind(
