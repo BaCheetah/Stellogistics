@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.3
+- **Hover-Animated `✕` Item-Hide Button**:
+  - Clicking `✕` on any row (both in the Galaxy Finder and in the Planet / Star System overview) now unchecks that specific item in the Picker instead of ignoring the entire planet.
+  - The `✕` button stays completely hidden at rest and smoothly slides in from the right (while shifting the amount text left) only when the corresponding row is hovered.
+- **Improved Readability on Hatched `+In-Transit` Bars**:
+  - Subdued the brightness and opacity of the diagonal hatched `+In-Transit` bar, lightened critical/warning/healthy status text colors for higher luminance contrast, and added a subtle `1px` dark drop shadow to row texts so fully saturated in-transit bars remain crisp and readable.
+- **Fixed Starmap Hover Mode & Defaulted to Disabled**:
+  - Fixed `Show Panel on Starmap Hover` (`Options ▾`) so hovering over planets or stars in the Starmap takes precedence over an already-focused planet/star while enabled, and changed its default setting to `false` (disabled).
+- **Streamlined Finder & Auto-Closing Dropdowns**:
+  - Entering `Finder` no longer auto-opens the Item Picker window, and removed the redundant `Pick Item` header button in Finder (access the Picker uniformly via `Filter ▾ → Custom Picker`).
+  - `Filter ▾` and `Options ▾` dropdown menus now automatically collapse whenever you click anywhere else in the UI or Starmap.
+
 ## 2.1.2
 - **Unified Picker & Improved Deselected Item Visibility**:
   - Increased the brightness and opacity of deselected (hidden) item icons in the Picker so dimmed icons remain clearly recognizable while keeping a strong visual contrast against selected (shown) items.

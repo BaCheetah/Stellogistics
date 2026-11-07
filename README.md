@@ -31,7 +31,7 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
 ### 2. Galaxy Item & Bottleneck Finder (`Finder`)
 - **Cluster-Wide Search & Bottleneck Scanner**: Locate every planet exporting or importing checked items across the entire star cluster, or use the `Exclude >40% (Healthy)` filter in **`Filter ▾`** to scan all checked items for shortages (`EMPTY`, `STARVED`, `LOW`).
 - **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← All`** to return to your Finder overview.
-- **Inline Item Dismiss (`[✕]`) & Planet Ignore Filter**: Click the inline **`[✕]`** button on any Finder row to uncheck that item in the Picker, or exclude entire planets/star systems via the **`Planets`** tab in the Picker or **`Filter ▾`**.
+- **Inline Item Dismiss (`✕`) & Planet Ignore Filter**: Hover any row in the Planet/Star overview or Finder to reveal the slide-in **`✕`** button and uncheck that item in the Picker, or exclude entire planets/star systems via the **`Planets`** tab in the Picker or **`Filter ▾`**.
 
 ### 3. Instant Bottleneck, Throughput & Hub Detection
 - **Color-Coded Health Bars & Badges**:
@@ -51,7 +51,7 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
 - **`Netted` (Net Intra-System)**: Nets internal star system supply against internal demand.
 - **`All Slots`**: Displays every remote supply and demand slot across all planets in the system.
 
-### 5. Unified Item, Building & Planet Picker (`Filter ▾` & `Pick Item`)
+### 5. Unified Item, Building & Planet Picker (`Filter ▾ → Custom Picker`)
 - **6 Quick Category Checkboxes & Threshold Filter**: Quickly toggle item categories or hide full/tapped/healthy storages (`≥90%` / `100%` / `>40%`) across both normal Starmap views and the Galaxy Finder.
 - **Unified `14 × 8` Picker (`Items`, `Buildings`, `Planets`)**:
   - One identical, spoiler-free picker window across both Starmap filtering and the Galaxy Finder, with **`✓ Check All`** and **`✕ Uncheck All`** controls and clear visual contrast between active and dimmed items.
@@ -96,7 +96,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.1.1.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.1.3.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.1.1.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.1.3.zip` as a local mod in Thunderstore Mod Manager / r2modman).
