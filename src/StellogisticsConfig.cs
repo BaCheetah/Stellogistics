@@ -545,6 +545,20 @@ namespace Stellogistics
             FlushSavedAstroItemOverrides();
         }
 
+        public void SetItemVisibleForAstro(int galaxySeed, int astroId, int itemId, bool visible)
+        {
+            if (itemId <= 0)
+            {
+                return;
+            }
+            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            bool changed = visible ? hiddenItems.Remove(itemId) : hiddenItems.Add(itemId);
+            if (changed)
+            {
+                FlushSavedAstroItemOverrides();
+            }
+        }
+
         private void ParseSavedIgnoredAstros()
         {
             _ignoredAstrosBySeed.Clear();

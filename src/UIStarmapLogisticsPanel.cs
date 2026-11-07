@@ -3214,7 +3214,7 @@ namespace Stellogistics
             _subtitleText.text = (onlyBottlenecks && summary.CheckedItemCount != 1)
                 ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}{pausedSuffix}"
                 : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}{pausedSuffix}";
-            _fleetInfoText.text = "Click row to focus & pin • [✕] to ignore planet";
+            _fleetInfoText.text = "Click row to focus & pin • [✕] to hide item";
 
             _sortModeBtnText.text = _config.SortOrder.Value switch
             {
@@ -3538,10 +3538,16 @@ namespace Stellogistics
             };
             row.OnMuteClick = () =>
             {
-                if (capturedPlanet != null)
+                if (capturedItemId > 0)
                 {
-                    _config.SetAstroIgnored(_lastGalaxySeed, capturedPlanet.astroId, true);
-                    RefreshCustomPickerPlanetsList();
+                    if (_hasSavedFinderSnapshot)
+                    {
+                        _savedFinderHiddenSnapshot.Add(capturedItemId);
+                        ReturnToFinderOverview();
+                        return;
+                    }
+                    _config.SetItemVisibleForAstro(_lastGalaxySeed, _lastTargetAstroId, capturedItemId, false);
+                    RefreshCustomPickerCells();
                     RefreshOptionsMenuState();
                     _forceRefresh = true;
                 }

@@ -31,7 +31,7 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
 ### 2. Galaxy Item & Bottleneck Finder (`Finder`)
 - **Cluster-Wide Search & Bottleneck Scanner**: Locate every planet exporting or importing checked items across the entire star cluster, or use the `Exclude >40% (Healthy)` filter in **`Filter ▾`** to scan all checked items for shortages (`EMPTY`, `STARVED`, `LOW`).
 - **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← All`** to return to your Finder overview.
-- **Planet & Star System Ignore Filter**: Exclude abandoned or starter worlds from Finder scans via the inline **`[✕]`** button on Finder rows, the **`Planets`** tab in the Picker, or the toggle in **`Filter ▾`**.
+- **Inline Item Dismiss (`[✕]`) & Planet Ignore Filter**: Click the inline **`[✕]`** button on any Finder row to uncheck that item in the Picker, or exclude entire planets/star systems via the **`Planets`** tab in the Picker or **`Filter ▾`**.
 
 ### 3. Instant Bottleneck, Throughput & Hub Detection
 - **Color-Coded Health Bars & Badges**:
