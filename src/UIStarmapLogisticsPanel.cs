@@ -351,7 +351,8 @@ namespace Stellogistics
 
         private const float HeaderHeight = 74f;
         private const float StackedHeaderHeight = 96f;
-        private const float StackedHeaderWidthThreshold = 385f;
+        private const float StackedWidthPlanet = 305f;
+        private const float StackedWidthFiveBtns = 355f;
         private const float CollapsedTabWidth = 148f;
         private const float CollapsedTabHeight = 32f;
         private const float SectionHeaderHeight = 26f;
@@ -801,7 +802,8 @@ namespace Stellogistics
                 }
 
                 _config.PanelWidth.Value = newW;
-                float activeHeaderH = newW < StackedHeaderWidthThreshold ? StackedHeaderHeight : HeaderHeight;
+                bool showFifthBtn = _finderModeActive || (_lastResolvedStar != null && _lastResolvedPlanet == null);
+                float activeHeaderH = ApplyHeaderLayout(newW, showFifthBtn);
                 float clampedViewportH = Mathf.Clamp(newTotalH - activeHeaderH, 82f, 950f);
                 _config.PanelMaxHeight.Value = clampedViewportH;
                 ApplyCurrentLayoutSizes(newW, clampedViewportH);
@@ -821,7 +823,8 @@ namespace Stellogistics
             {
                 return CollapsedTabHeight;
             }
-            bool stacked = panelWidth < StackedHeaderWidthThreshold;
+            float threshold = showFifthButton ? StackedWidthFiveBtns : StackedWidthPlanet;
+            bool stacked = panelWidth < threshold;
             float currentHeaderH = stacked ? StackedHeaderHeight : HeaderHeight;
 
             _headerRect.sizeDelta = new Vector2(0f, currentHeaderH);
