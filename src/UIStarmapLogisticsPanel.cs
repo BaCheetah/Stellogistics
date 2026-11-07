@@ -159,8 +159,15 @@ namespace Stellogistics
             public RectTransform RootRect;
             public Image BgImage;
             public Button RowButton;
+            public PointerHoverTracker RowHoverTracker;
             public Action OnRowClick;
             public GameObject MuteBtnGo;
+            public RectTransform MuteBtnRect;
+            public Image MuteBtnBg;
+            public Text MuteBtnText;
+            public PointerHoverTracker MuteHoverTracker;
+            public bool ShowMuteOnHover;
+            public float MuteSlideProgress;
             public Action OnMuteClick;
             public RectTransform FillBarRect;
             public Image FillBarImage;
@@ -2083,6 +2090,7 @@ namespace Stellogistics
             ItemRowView row = _rowPool[index];
             if (!row.RootGo.activeSelf)
             {
+                row.MuteSlideProgress = 0f;
                 row.RootGo.SetActive(true);
             }
             return row;
@@ -2090,13 +2098,15 @@ namespace Stellogistics
 
         private ItemRowView CreateRowWidget(int index)
         {
-            GameObject rowGo = new GameObject($"ItemRow_{index}", typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject rowGo = new GameObject($"ItemRow_{index}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(PointerHoverTracker));
             rowGo.transform.SetParent(_scrollContentRect, false);
             RectTransform rowRect = rowGo.GetComponent<RectTransform>();
             rowRect.anchorMin = new Vector2(0f, 1f);
             rowRect.anchorMax = new Vector2(1f, 1f);
             rowRect.pivot = new Vector2(0.5f, 1f);
             rowRect.sizeDelta = new Vector2(0f, RowHeight);
+
+            PointerHoverTracker rowHoverTracker = rowGo.GetComponent<PointerHoverTracker>();
 
             Image bgImg = rowGo.GetComponent<Image>();
             Color baseBg = (index % 2 == 0) ? RowEvenBgColor : RowOddBgColor;
@@ -2185,23 +2195,20 @@ namespace Stellogistics
             subStatusText.rectTransform.offsetMin = new Vector2(0f, 1f);
             subStatusText.rectTransform.offsetMax = new Vector2(-10f, 0f);
 
-            // Subtle, unobtrusive [✕] button on Finder rows that only lights up on hover
-            GameObject muteBtnGo = new GameObject("MutePlanetBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(ItemCellHoverHandler));
+            // Hover-revealed [✕] button on Finder rows with slide-in animation
+            GameObject muteBtnGo = new GameObject("MutePlanetBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(PointerHoverTracker), typeof(ItemCellHoverHandler));
             muteBtnGo.transform.SetParent(rowRect, false);
             RectTransform muteRect = muteBtnGo.GetComponent<RectTransform>();
             muteRect.anchorMin = new Vector2(1f, 0.5f);
             muteRect.anchorMax = new Vector2(1f, 0.5f);
             muteRect.pivot = new Vector2(1f, 0.5f);
-            muteRect.anchoredPosition = new Vector2(-4f, 0f);
+            muteRect.anchoredPosition = new Vector2(10f, 0f);
             muteRect.sizeDelta = new Vector2(15f, 15f);
 
-            Color muteBgIdle = new Color(0f, 0f, 0f, 0.01f);
-            Color muteBgHover = new Color(0.42f, 0.14f, 0.18f, 0.88f);
-            Color muteTxtIdle = new Color(0.62f, 0.74f, 0.86f, 0.32f);
-            Color muteTxtHover = new Color(1f, 0.80f, 0.84f, 1f);
+            PointerHoverTracker muteHoverTracker = muteBtnGo.GetComponent<PointerHoverTracker>();
 
             Image muteBg = muteBtnGo.GetComponent<Image>();
-            muteBg.color = muteBgIdle;
+            muteBg.color = new Color(0.14f, 0.22f, 0.32f, 0f);
 
             Button muteBtn = muteBtnGo.GetComponent<Button>();
             ColorBlock muteCb = muteBtn.colors;
@@ -2210,23 +2217,12 @@ namespace Stellogistics
             muteCb.pressedColor = new Color(0.82f, 0.72f, 0.72f, 1f);
             muteBtn.colors = muteCb;
 
-            Text muteTxt = CreateText("Text", muteRect, 9, FontStyle.Normal, TextAnchor.MiddleCenter, muteTxtIdle);
+            Text muteTxt = CreateText("Text", muteRect, 9, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.76f, 0.88f, 0.98f, 0f));
             muteTxt.rectTransform.anchorMin = Vector2.zero;
             muteTxt.rectTransform.anchorMax = Vector2.one;
             muteTxt.rectTransform.sizeDelta = Vector2.zero;
             muteTxt.text = "✕";
 
-            ItemCellHoverHandler muteHover = muteBtnGo.GetComponent<ItemCellHoverHandler>();
-            muteHover.OnHoverEnter = () =>
-            {
-                muteBg.color = muteBgHover;
-                muteTxt.color = muteTxtHover;
-            };
-            muteHover.OnHoverExit = () =>
-            {
-                muteBg.color = muteBgIdle;
-                muteTxt.color = muteTxtIdle;
-            };
             muteBtnGo.SetActive(false);
 
             var view = new ItemRowView
@@ -2235,7 +2231,14 @@ namespace Stellogistics
                 RootRect = rowRect,
                 BgImage = bgImg,
                 RowButton = rowBtn,
+                RowHoverTracker = rowHoverTracker,
                 MuteBtnGo = muteBtnGo,
+                MuteBtnRect = muteRect,
+                MuteBtnBg = muteBg,
+                MuteBtnText = muteTxt,
+                MuteHoverTracker = muteHoverTracker,
+                ShowMuteOnHover = false,
+                MuteSlideProgress = 0f,
                 FillBarRect = fillRect,
                 FillBarImage = fillImg,
                 TransitBarRect = transitRect,
@@ -2247,9 +2250,81 @@ namespace Stellogistics
                 AmountText = amountText,
                 SubStatusText = subStatusText
             };
+
+            ItemCellHoverHandler muteHover = muteBtnGo.GetComponent<ItemCellHoverHandler>();
+            muteHover.OnHoverEnter = () => ApplyRowMuteAnimationState(view);
+            muteHover.OnHoverExit = () => ApplyRowMuteAnimationState(view);
+
             rowBtn.onClick.AddListener(() => view.OnRowClick?.Invoke());
             muteBtn.onClick.AddListener(() => view.OnMuteClick?.Invoke());
             return view;
+        }
+
+        private void UpdateRowHoverAnimations()
+        {
+            if (_panelCollapsed || _rowPool.Count == 0)
+            {
+                return;
+            }
+
+            float dt = Time.unscaledDeltaTime;
+            const float speed = 10f;
+
+            for (int i = 0; i < _rowPool.Count; i++)
+            {
+                ItemRowView row = _rowPool[i];
+                if (row == null || !row.RootGo.activeSelf)
+                {
+                    continue;
+                }
+
+                bool isHovered = row.ShowMuteOnHover &&
+                    ((row.RowHoverTracker != null && row.RowHoverTracker.IsHovered) ||
+                     (row.MuteHoverTracker != null && row.MuteHoverTracker.IsHovered));
+
+                float target = isHovered ? 1f : 0f;
+                if (Mathf.Approximately(row.MuteSlideProgress, target))
+                {
+                    row.MuteSlideProgress = target;
+                    continue;
+                }
+
+                row.MuteSlideProgress = Mathf.MoveTowards(row.MuteSlideProgress, target, dt * speed);
+                ApplyRowMuteAnimationState(row);
+            }
+        }
+
+        private static void ApplyRowMuteAnimationState(ItemRowView row)
+        {
+            float t = row.ShowMuteOnHover ? Mathf.Clamp01(row.MuteSlideProgress) : 0f;
+            float eased = 1f - (1f - t) * (1f - t);
+
+            float rightTextOffset = Mathf.Lerp(-10f, -23f, eased);
+            row.AmountText.rectTransform.offsetMax = new Vector2(rightTextOffset, -1f);
+            row.SubStatusText.rectTransform.offsetMax = new Vector2(rightTextOffset, 0f);
+
+            bool shouldBeActive = row.ShowMuteOnHover && t > 0.01f;
+            if (row.MuteBtnGo.activeSelf != shouldBeActive)
+            {
+                row.MuteBtnGo.SetActive(shouldBeActive);
+            }
+
+            if (shouldBeActive)
+            {
+                float xPos = Mathf.Lerp(10f, -4f, eased);
+                row.MuteBtnRect.anchoredPosition = new Vector2(xPos, 0f);
+
+                bool muteDirectHover = row.MuteHoverTracker != null && row.MuteHoverTracker.IsHovered;
+                Color bgCol = muteDirectHover
+                    ? new Color(0.48f, 0.15f, 0.20f, 0.92f * eased)
+                    : new Color(0.14f, 0.22f, 0.32f, 0.72f * eased);
+                Color txtCol = muteDirectHover
+                    ? new Color(1f, 0.84f, 0.86f, 1f * eased)
+                    : new Color(0.76f, 0.88f, 0.98f, 0.90f * eased);
+
+                row.MuteBtnBg.color = bgCol;
+                row.MuteBtnText.color = txtCol;
+            }
         }
 
         private Text CreateText(string name, RectTransform parent, int fontSize, FontStyle style, TextAnchor align, Color color)
@@ -2678,6 +2753,7 @@ namespace Stellogistics
 
             UpdatePanelPosition();
             CheckAutoCloseDropdownMenus();
+            UpdateRowHoverAnimations();
 
             if (IsPointerOverUI())
             {
@@ -3165,12 +3241,9 @@ namespace Stellogistics
                 : accentColor;
 
             int capturedItemId = item.ItemId;
-            if (row.MuteBtnGo != null && row.MuteBtnGo.activeSelf)
-            {
-                row.MuteBtnGo.SetActive(false);
-            }
-            row.AmountText.rectTransform.offsetMax = new Vector2(-10f, -1f);
-            row.SubStatusText.rectTransform.offsetMax = new Vector2(-10f, 0f);
+            row.ShowMuteOnHover = false;
+            row.MuteSlideProgress = 0f;
+            ApplyRowMuteAnimationState(row);
             row.OnMuteClick = null;
             row.OnRowClick = () =>
             {
@@ -3558,12 +3631,8 @@ namespace Stellogistics
                 ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
                 : accentColor;
 
-            row.AmountText.rectTransform.offsetMax = new Vector2(-22f, -1f);
-            row.SubStatusText.rectTransform.offsetMax = new Vector2(-22f, 0f);
-            if (row.MuteBtnGo != null && !row.MuteBtnGo.activeSelf)
-            {
-                row.MuteBtnGo.SetActive(true);
-            }
+            row.ShowMuteOnHover = true;
+            ApplyRowMuteAnimationState(row);
 
             PlanetData capturedPlanet = entry.Planet;
             int capturedItemId = item.ItemId;
