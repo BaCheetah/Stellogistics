@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2
+- **Unified Picker & Improved Deselected Item Visibility**:
+  - Increased the brightness and opacity of deselected (hidden) item icons in the Picker so dimmed icons remain clearly recognizable while keeping a strong visual contrast against selected (shown) items.
+  - Removed the redundant `! ≤40% Only` button from the Picker so the Picker toolbar is 100% identical in all modes and the `Exclude` threshold setting in `Filter ▾` (`≥90%` / `100%` / `>40%`) governs both normal Starmap views and the Galaxy Finder uniformly.
+
 ## 2.1.1
 - **Task Manager-Style Refresh Rate Control (`Options ▾`)**:
   - Added a 4-mode Refresh Rate selector in `Options ▾`: `Fast` (0.10s), `Medium` (0.25s, Default), `Slow` (1.00s), and `Paused` (`⏸ Paused`, freezing periodic updates so rows stay still while inspecting).

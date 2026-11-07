@@ -29,7 +29,7 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
 - **Fleet & Warper Readiness**: Header displays total ILS & Orbital Collector counts, idle vs. total Logistics Vessels, and available Space Warpers.
 
 ### 2. Galaxy Item & Bottleneck Finder (`Finder`)
-- **Cluster-Wide Search & Bottleneck Scanner**: Locate every planet exporting or importing checked items across the entire star cluster, or toggle **`! ≤40% Only`** to scan all checked items for shortages (`EMPTY`, `STARVED`, `LOW`).
+- **Cluster-Wide Search & Bottleneck Scanner**: Locate every planet exporting or importing checked items across the entire star cluster, or use the `Exclude >40% (Healthy)` filter in **`Filter ▾`** to scan all checked items for shortages (`EMPTY`, `STARVED`, `LOW`).
 - **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← All`** to return to your Finder overview.
 - **Planet & Star System Ignore Filter**: Exclude abandoned or starter worlds from Finder scans via the inline **`[✕]`** button on Finder rows, the **`Planets`** tab in the Picker, or the toggle in **`Filter ▾`**.
 
@@ -52,9 +52,9 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
 - **`All Slots`**: Displays every remote supply and demand slot across all planets in the system.
 
 ### 5. Unified Item, Building & Planet Picker (`Filter ▾` & `Pick Item`)
-- **6 Quick Category Checkboxes & Threshold Filter**: Quickly toggle item categories or hide full/tapped storages (`≥90%` / `100%` / `>40%`).
+- **6 Quick Category Checkboxes & Threshold Filter**: Quickly toggle item categories or hide full/tapped/healthy storages (`≥90%` / `100%` / `>40%`) across both normal Starmap views and the Galaxy Finder.
 - **Unified `14 × 8` Picker (`Items`, `Buildings`, `Planets`)**:
-  - One shared, spoiler-free picker window across both Starmap filtering and the Galaxy Finder, with **`✓ Check All`**, **`✕ Uncheck All`**, and **`! ≤40% Only`** controls.
+  - One identical, spoiler-free picker window across both Starmap filtering and the Galaxy Finder, with **`✓ Check All`** and **`✕ Uncheck All`** controls and clear visual contrast between active and dimmed items.
 
 ### 6. Flexible Window Management & `Options ▾`
 - **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), Starmap hover behavior, choose a Task Manager-style **Refresh Rate** (`Fast`, `Medium`, `Slow`, `Paused`), or reset UI position and size.

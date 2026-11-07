@@ -1,6 +1,6 @@
 {
   "name": "Stellogistics",
-  "version_number": "2.1.1",
+  "version_number": "2.1.2",
   "website_url": "https://github.com/BaCheetah/Stellogistics",
   "description": "Combined Starmap ILS & Orbital Collector Imports/Exports per Planet & Star System, plus a Galaxy Item & Bottleneck Finder with Starmap focus & navigation pin.",
   "dependencies": [

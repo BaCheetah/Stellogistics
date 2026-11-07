@@ -1054,10 +1054,10 @@ namespace Stellogistics
 
         public static GalaxyItemSearchSummary ScanGalaxyBottlenecks(StellogisticsConfig config)
         {
-            return ScanGalaxyFinder(config, true);
+            return ScanGalaxyFinder(config);
         }
 
-        public static GalaxyItemSearchSummary ScanGalaxyFinder(StellogisticsConfig config, bool onlyBottlenecks)
+        public static GalaxyItemSearchSummary ScanGalaxyFinder(StellogisticsConfig config)
         {
             int galaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
             var storedIds = new HashSet<int>();
@@ -1091,6 +1091,14 @@ namespace Stellogistics
                 }
             }
 
+            bool includeCollectors = config.IncludeOrbitalCollectors.Value;
+            int critPct = config.CriticalThresholdPercent.Value;
+            int warnPct = config.WarningThresholdPercent.Value;
+            int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
+            bool excludeFull = config.GetExclude100PercentForAstro(galaxySeed, 0);
+            bool onlyBottlenecks = excludeFull && excludeThresholdPct <= warnPct + 1;
+            ESortOrder sortOrder = config.SortOrder.Value;
+
             string summaryTitle;
             if (checkedCount == 0)
             {
@@ -1122,13 +1130,6 @@ namespace Stellogistics
             {
                 return summary;
             }
-
-            bool includeCollectors = config.IncludeOrbitalCollectors.Value;
-            int critPct = config.CriticalThresholdPercent.Value;
-            int warnPct = config.WarningThresholdPercent.Value;
-            int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
-            bool excludeFull = config.GetExclude100PercentForAstro(galaxySeed, 0);
-            ESortOrder sortOrder = config.SortOrder.Value;
 
             var exportsByItem = new Dictionary<int, CombinedLogisticsItem>();
             var importsByItem = new Dictionary<int, CombinedLogisticsItem>();

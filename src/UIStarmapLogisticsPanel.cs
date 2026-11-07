@@ -217,6 +217,7 @@ namespace Stellogistics
             public GameObject CellGo;
             public Image BgImage;
             public Image IconImage;
+            public Outline CellOutline;
         }
 
         private StellogisticsConfig _config;
@@ -304,8 +305,6 @@ namespace Stellogistics
         private Text _customTabPlanetsText;
         private Button _pickerCheckAllBtn;
         private Button _pickerUncheckAllBtn;
-        private Button _pickerBottlenecksBtn;
-        private Text _pickerBottlenecksTxt;
         private Button _pickerShowAllPlanetsBtn;
         private int _customPickerActiveTab = 1;
         private bool _customPickerOpen = false;
@@ -315,9 +314,7 @@ namespace Stellogistics
         private readonly HashSet<int> _storedItemsSet = new HashSet<int>();
         private readonly HashSet<int> _savedFinderHiddenSnapshot = new HashSet<int>();
         private bool _hasSavedFinderSnapshot = false;
-        private bool _savedFinderOnlyBottlenecks = true;
         private int _lastFinderCheckedCount = 0;
-        private bool _finderOnlyBottlenecks = true;
 
         private readonly List<ItemRowView> _rowPool = new List<ItemRowView>();
 
@@ -1355,16 +1352,6 @@ namespace Stellogistics
                 _forceRefresh = true;
             });
 
-            // Finder mode toggle button: Filter to only Bottlenecks (≤40%) or show all fill levels
-            _pickerBottlenecksBtn = CreateHeaderButton("PickerBottlenecks", _customPickerRect, new Vector2(418f, -36f), new Vector2(78f, 24f), false, out _pickerBottlenecksTxt);
-            _pickerBottlenecksTxt.text = "! ≤40% Only";
-            _pickerBottlenecksBtn.onClick.AddListener(() =>
-            {
-                _finderOnlyBottlenecks = !_finderOnlyBottlenecks;
-                RefreshBottlenecksToggleVisual();
-                _forceRefresh = true;
-            });
-
             // Planets tab button: Show all planets / clear all ignored planets & systems
             _pickerShowAllPlanetsBtn = CreateHeaderButton("PickerShowAllPlanets", _customPickerRect, new Vector2(256f, -36f), new Vector2(124f, 24f), false, out Text pickerShowAllPlanetsTxt);
             pickerShowAllPlanetsTxt.text = "✓ Show All Planets";
@@ -1522,7 +1509,8 @@ namespace Stellogistics
                         Category = itemCategory,
                         CellGo = cellGo,
                         BgImage = cellBg,
-                        IconImage = iconImg
+                        IconImage = iconImg,
+                        CellOutline = cellOutline
                     });
                 }
             }
@@ -1784,28 +1772,6 @@ namespace Stellogistics
             _customPickerPlanetsContentRect.sizeDelta = new Vector2(0f, contentH);
         }
 
-        private void RefreshBottlenecksToggleVisual()
-        {
-            if (_pickerBottlenecksBtn == null)
-            {
-                return;
-            }
-            Image bg = _pickerBottlenecksBtn.GetComponent<Image>();
-            Outline ol = _pickerBottlenecksBtn.GetComponent<Outline>();
-            if (_finderOnlyBottlenecks)
-            {
-                bg.color = new Color(0.38f, 0.22f, 0.08f, 0.98f);
-                if (ol != null) ol.effectColor = new Color(0.95f, 0.60f, 0.22f, 0.85f);
-                if (_pickerBottlenecksTxt != null) _pickerBottlenecksTxt.color = new Color(1f, 0.94f, 0.80f, 1f);
-            }
-            else
-            {
-                bg.color = new Color(0.14f, 0.22f, 0.32f, 0.92f);
-                if (ol != null) ol.effectColor = new Color(0.30f, 0.50f, 0.72f, 0.45f);
-                if (_pickerBottlenecksTxt != null) _pickerBottlenecksTxt.color = new Color(0.75f, 0.86f, 0.96f, 0.90f);
-            }
-        }
-
         private void ToggleCustomItemPicker()
         {
             if (_customPickerGo == null)
@@ -1823,7 +1789,6 @@ namespace Stellogistics
             _customPickerOpen = true;
             _customPickerGo.SetActive(true);
 
-            RefreshBottlenecksToggleVisual();
             PositionCustomPickerBesidePanel();
             _customPickerRect.SetAsLastSibling();
             SetCustomPickerTab(_customPickerActiveTab);
@@ -1891,15 +1856,11 @@ namespace Stellogistics
 
             if (_pickerCheckAllBtn != null) _pickerCheckAllBtn.gameObject.SetActive(!isPlanetsTab);
             if (_pickerUncheckAllBtn != null) _pickerUncheckAllBtn.gameObject.SetActive(!isPlanetsTab);
-            if (_pickerBottlenecksBtn != null) _pickerBottlenecksBtn.gameObject.SetActive(!isPlanetsTab && _finderModeActive);
             if (_pickerShowAllPlanetsBtn != null) _pickerShowAllPlanetsBtn.gameObject.SetActive(isPlanetsTab);
-            RefreshBottlenecksToggleVisual();
 
             if (_customPickerHoveredLabel != null)
             {
-                _customPickerHoveredLabel.rectTransform.sizeDelta = (!isPlanetsTab && _finderModeActive)
-                    ? new Vector2(-504f, 24f)
-                    : new Vector2(-430f, 24f);
+                _customPickerHoveredLabel.rectTransform.sizeDelta = new Vector2(-430f, 24f);
                 _customPickerHoveredLabel.text = isPlanetsTab
                     ? "Toggle Star / Planet in Finder"
                     : "Bright = Shown • Dimmed = Hidden";
@@ -1953,11 +1914,17 @@ namespace Stellogistics
 
                 bool visible = _config.IsItemVisibleForAstro(_lastGalaxySeed, _lastTargetAstroId, cell.ItemId, cell.Category);
                 cell.BgImage.color = visible
-                    ? new Color(0.14f, 0.26f, 0.38f, 0.92f)
-                    : new Color(0.06f, 0.08f, 0.11f, 0.70f);
+                    ? new Color(0.16f, 0.32f, 0.48f, 0.96f)
+                    : new Color(0.05f, 0.08f, 0.12f, 0.82f);
                 cell.IconImage.color = visible
                     ? Color.white
-                    : new Color(0.32f, 0.35f, 0.40f, 0.28f);
+                    : new Color(0.75f, 0.80f, 0.86f, 0.52f);
+                if (cell.CellOutline != null)
+                {
+                    cell.CellOutline.effectColor = visible
+                        ? new Color(0.36f, 0.68f, 0.96f, 0.68f)
+                        : new Color(0.18f, 0.28f, 0.40f, 0.28f);
+                }
             }
         }
 
@@ -2352,7 +2319,6 @@ namespace Stellogistics
             {
                 _hasSavedFinderSnapshot = false;
                 _config.RestoreHiddenItemsSnapshot(_lastGalaxySeed, _lastTargetAstroId, _savedFinderHiddenSnapshot);
-                _finderOnlyBottlenecks = _savedFinderOnlyBottlenecks;
             }
             else
             {
@@ -2704,7 +2670,7 @@ namespace Stellogistics
 
                 if (_finderModeActive)
                 {
-                    GalaxyItemSearchSummary searchSummary = LogisticsAggregator.ScanGalaxyFinder(_config, _finderOnlyBottlenecks);
+                    GalaxyItemSearchSummary searchSummary = LogisticsAggregator.ScanGalaxyFinder(_config);
                     RenderGalaxySearchSummary(searchSummary);
                 }
                 else
@@ -3159,12 +3125,10 @@ namespace Stellogistics
                     if (!_hasSavedFinderSnapshot)
                     {
                         _config.CopyHiddenItemsSnapshot(_lastGalaxySeed, _lastTargetAstroId, _savedFinderHiddenSnapshot);
-                        _savedFinderOnlyBottlenecks = _finderOnlyBottlenecks;
                         _hasSavedFinderSnapshot = true;
                     }
                     _finderModeActive = true;
                     _config.SetCustomSingleItemOnly(_lastGalaxySeed, _lastTargetAstroId, capturedItemId);
-                    _finderOnlyBottlenecks = false;
                     if (_customPickerOpen)
                     {
                         SetCustomPickerTab(_customPickerActiveTab);
@@ -3241,11 +3205,13 @@ namespace Stellogistics
                 ? $" • {summary.IgnoredPlanetMatchCount} Ignored"
                 : (totalIgnoredAstros > 0 ? $" • {totalIgnoredAstros} Filtered" : "");
 
+            bool onlyBottlenecks = _config.GetExclude100PercentForAstro(_lastGalaxySeed, 0) &&
+                _config.ExcludeFullThresholdPercent.Value <= _config.WarningThresholdPercent.Value + 1;
             string pausedSuffix = _config.RefreshRate.Value == ERefreshRate.Paused
                 ? " • <color=#FFD24C>⏸ Paused</color>"
                 : "";
             _titleText.text = $"Finder: {summary.ItemName}";
-            _subtitleText.text = (_finderOnlyBottlenecks && summary.CheckedItemCount != 1)
+            _subtitleText.text = (onlyBottlenecks && summary.CheckedItemCount != 1)
                 ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}{pausedSuffix}"
                 : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}{pausedSuffix}";
             _fleetInfoText.text = "Click row to focus & pin • [✕] to ignore planet";
@@ -3279,7 +3245,7 @@ namespace Stellogistics
                 }
                 else
                 {
-                    _emptyStateText.text = _finderOnlyBottlenecks
+                    _emptyStateText.text = onlyBottlenecks
                         ? "All checked remote slots are Healthy (>40%)!"
                         : $"No planet exports or imports {summary.ItemName}.";
                 }
@@ -3554,11 +3520,9 @@ namespace Stellogistics
                     if (!_hasSavedFinderSnapshot)
                     {
                         _config.CopyHiddenItemsSnapshot(_lastGalaxySeed, _lastTargetAstroId, _savedFinderHiddenSnapshot);
-                        _savedFinderOnlyBottlenecks = _finderOnlyBottlenecks;
                         _hasSavedFinderSnapshot = true;
                     }
                     _config.SetCustomSingleItemOnly(_lastGalaxySeed, _lastTargetAstroId, capturedItemId);
-                    _finderOnlyBottlenecks = false;
                     if (_customPickerOpen)
                     {
                         SetCustomPickerTab(_customPickerActiveTab);
