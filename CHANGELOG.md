@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.0
+- **Planet & Star System Hub Detection (`⇄ Hub`)**:
+  - Automatically detects when a planet (or star system) both exports and imports the same item, displaying a cyan `⇄ Hub (Imp ...)` / `⇄ Hub (Exp ...)` badge with the counterpart capacity on both rows (even if one side is hidden by filters).
+- **Logistics / Throughput Bottleneck Indicator (`⚡+ILS`)**:
+  - Automatically flags importing entries with `⚡+ILS` when their storage is `STARVED` or `LOW` and current stock plus inbound vessels (`+In-Transit` hatched bar) does not fill capacity (`< 85%`) while another non-ignored planet in the galaxy has healthy/unclaimed export stock ready for pickup.
+- **UI, Header & Scrollbar Polish**:
+  - Enforced the vertical scrollbar as the true right boundary of the list and anchored fill/transit bars via normalized `RectTransform` anchors so rows never bleed behind or to the right of the scrollbar during resizing.
+  - Made the inline Finder `[✕]` planet-ignore button subtle and unobtrusive at rest, lighting up only when hovered.
+  - Improved header button row spacing, responsive stacking thresholds, and top-left collapse button margins.
+
 ## 2.0.1
 - **Fixed Taskbar Tab Drag-to-Collapse Flicker**: Prevented `ApplyHeaderLayout` from transiently applying the expanded/stacked header height while dragging the resize grip in or above the collapsed Taskbar Tab state.
 

@@ -27,6 +27,12 @@ namespace Stellogistics
         public bool HasExternalStarPair;
         public bool HasWarpCapableStation;
 
+        public bool IsHub;
+        public long HubCounterpartStored;
+        public long HubCounterpartMax;
+        public int HubCounterpartSlots;
+        public bool HasLogisticsBottleneck;
+
         public float FillRatio
         {
             get

@@ -8,6 +8,14 @@ namespace Stellogistics
         private const double OneLightYearMeters = 2_390_000.0;
         private const int WarperItemId = 1210;
 
+        private struct SupplyAvailability
+        {
+            public int HealthySupplierPlanetCount;
+            public int SingleSupplierPlanetId;
+            public int SingleSupplierStarId;
+            public bool MultipleStarSystems;
+        }
+
         public static LogisticsSummary AggregatePlanet(PlanetData planet, StellogisticsConfig config)
         {
             int galaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
@@ -52,7 +60,8 @@ namespace Stellogistics
             );
 
             summary.ColonizedPlanetCount = summary.HasAnyStations ? 1 : 0;
-            FinalizeSummary(summary, exportsByItem, importsByItem, config);
+            LinkHubItems(exportsByItem, importsByItem);
+            FinalizeSummary(summary, exportsByItem, importsByItem, config, planet.id, 0);
 
             string collectorPart = summary.TotalCollectorCount > 0
                 ? $", {summary.TotalCollectorCount} OC"
@@ -134,7 +143,8 @@ namespace Stellogistics
                 ApplyNetOutIntraSystemFilter(exportsByItem, importsByItem);
             }
 
-            FinalizeSummary(summary, exportsByItem, importsByItem, config);
+            LinkHubItems(exportsByItem, importsByItem);
+            FinalizeSummary(summary, exportsByItem, importsByItem, config, 0, star.id);
 
             string modeLabel = filterMode switch
             {
@@ -449,17 +459,202 @@ namespace Stellogistics
             }
         }
 
+        private static void LinkHubItems(
+            Dictionary<int, CombinedLogisticsItem> exportsByItem,
+            Dictionary<int, CombinedLogisticsItem> importsByItem)
+        {
+            foreach (KeyValuePair<int, CombinedLogisticsItem> kvp in exportsByItem)
+            {
+                if (importsByItem.TryGetValue(kvp.Key, out CombinedLogisticsItem impItem))
+                {
+                    CombinedLogisticsItem expItem = kvp.Value;
+                    expItem.IsHub = true;
+                    expItem.HubCounterpartStored = impItem.StoredCount;
+                    expItem.HubCounterpartMax = impItem.MaxCount;
+                    expItem.HubCounterpartSlots = impItem.SlotCount;
+
+                    impItem.IsHub = true;
+                    impItem.HubCounterpartStored = expItem.StoredCount;
+                    impItem.HubCounterpartMax = expItem.MaxCount;
+                    impItem.HubCounterpartSlots = expItem.SlotCount;
+                }
+            }
+        }
+
+        private static void RecordPlanetSupplyAvailability(
+            Dictionary<int, SupplyAvailability> supplyByItem,
+            int planetId,
+            int starId,
+            CombinedLogisticsItem expItem,
+            CombinedLogisticsItem impItemOnSamePlanet,
+            int critPct,
+            int warnPct)
+        {
+            if (expItem == null || expItem.StoredCount <= 0)
+            {
+                return;
+            }
+
+            EHealthStatus expStatus = expItem.GetHealthStatus(critPct, warnPct);
+            bool isStarvingHub = impItemOnSamePlanet != null &&
+                impItemOnSamePlanet.GetHealthStatus(critPct, warnPct) != EHealthStatus.Healthy &&
+                impItemOnSamePlanet.MaxCount > expItem.MaxCount;
+            if (isStarvingHub)
+            {
+                return;
+            }
+
+            long unclaimedStock = expItem.StoredCount + expItem.InTransitOrder;
+            if (expStatus != EHealthStatus.Healthy && unclaimedStock < 400)
+            {
+                return;
+            }
+
+            if (!supplyByItem.TryGetValue(expItem.ItemId, out SupplyAvailability avail))
+            {
+                avail.HealthySupplierPlanetCount = 1;
+                avail.SingleSupplierPlanetId = planetId;
+                avail.SingleSupplierStarId = starId;
+                avail.MultipleStarSystems = false;
+            }
+            else
+            {
+                if (avail.HealthySupplierPlanetCount == 1 && avail.SingleSupplierPlanetId != planetId)
+                {
+                    avail.HealthySupplierPlanetCount = 2;
+                }
+                else if (avail.HealthySupplierPlanetCount > 1)
+                {
+                    avail.HealthySupplierPlanetCount++;
+                }
+                if (avail.SingleSupplierStarId != starId)
+                {
+                    avail.MultipleStarSystems = true;
+                }
+            }
+            supplyByItem[expItem.ItemId] = avail;
+        }
+
+        private static bool HasExternalSupply(
+            Dictionary<int, SupplyAvailability> supplyByItem,
+            int itemId,
+            int targetPlanetId,
+            int targetStarId)
+        {
+            if (!supplyByItem.TryGetValue(itemId, out SupplyAvailability avail) || avail.HealthySupplierPlanetCount <= 0)
+            {
+                return false;
+            }
+            if (targetPlanetId > 0)
+            {
+                return avail.HealthySupplierPlanetCount >= 2 || avail.SingleSupplierPlanetId != targetPlanetId;
+            }
+            if (targetStarId > 0)
+            {
+                return avail.MultipleStarSystems || avail.SingleSupplierStarId != targetStarId || avail.HealthySupplierPlanetCount >= 2;
+            }
+            return true;
+        }
+
+        private static void CollectGalaxySupplyAvailability(
+            StellogisticsConfig config,
+            int galaxySeed,
+            int critPct,
+            int warnPct,
+            Dictionary<int, SupplyAvailability> outSupplyByItem)
+        {
+            outSupplyByItem.Clear();
+            if (GameMain.galaxy?.stars == null || GameMain.data == null)
+            {
+                return;
+            }
+
+            bool includeCollectors = config.IncludeOrbitalCollectors.Value;
+            var planetExports = new Dictionary<int, CombinedLogisticsItem>();
+            var planetImports = new Dictionary<int, CombinedLogisticsItem>();
+
+            StarData[] stars = GameMain.galaxy.stars;
+            for (int s = 0; s < stars.Length; s++)
+            {
+                StarData star = stars[s];
+                if (star == null || star.planets == null)
+                {
+                    continue;
+                }
+
+                for (int p = 0; p < star.planets.Length; p++)
+                {
+                    PlanetData planet = star.planets[p];
+                    StationComponent[] stationPool = planet?.factory?.transport?.stationPool;
+                    int stationCursor = planet?.factory?.transport != null ? planet.factory.transport.stationCursor : 0;
+                    if (stationPool == null || stationCursor <= 0 || config.IsPlanetOrStarIgnored(galaxySeed, planet))
+                    {
+                        continue;
+                    }
+
+                    planetExports.Clear();
+                    planetImports.Clear();
+                    int dIls = 0, dCol = 0, dWarp = 0, dIdle = 0, dWork = 0;
+                    AggregatePlanetStations(
+                        planet,
+                        star.id,
+                        includeCollectors,
+                        EStarFilterMode.AllRemoteSlots,
+                        null,
+                        planetExports,
+                        planetImports,
+                        null,
+                        null,
+                        ref dIls,
+                        ref dCol,
+                        ref dWarp,
+                        ref dIdle,
+                        ref dWork
+                    );
+
+                    foreach (CombinedLogisticsItem expItem in planetExports.Values)
+                    {
+                        planetImports.TryGetValue(expItem.ItemId, out CombinedLogisticsItem impOnSame);
+                        RecordPlanetSupplyAvailability(outSupplyByItem, planet.id, star.id, expItem, impOnSame, critPct, warnPct);
+                    }
+                }
+            }
+        }
+
+        private static void EvaluateImportBottleneck(
+            CombinedLogisticsItem impItem,
+            EHealthStatus status,
+            Dictionary<int, SupplyAvailability> supplyByItem,
+            int planetId,
+            int starId)
+        {
+            if (impItem == null || impItem.Logic != ELogisticStorage.Demand || impItem.MaxCount <= 0)
+            {
+                return;
+            }
+            if (status != EHealthStatus.Healthy &&
+                (impItem.FillRatio + impItem.InboundTransitRatio) < 0.85f &&
+                HasExternalSupply(supplyByItem, impItem.ItemId, planetId, starId))
+            {
+                impItem.HasLogisticsBottleneck = true;
+            }
+        }
+
         private static void FinalizeSummary(
             LogisticsSummary summary,
             Dictionary<int, CombinedLogisticsItem> exportsByItem,
             Dictionary<int, CombinedLogisticsItem> importsByItem,
-            StellogisticsConfig config)
+            StellogisticsConfig config,
+            int targetPlanetId,
+            int targetStarId)
         {
             int critPct = config.CriticalThresholdPercent.Value;
             int warnPct = config.WarningThresholdPercent.Value;
             int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
             ESortOrder sortOrder = config.SortOrder.Value;
             bool excludeFull = config.GetExclude100PercentForAstro(summary.GalaxySeed, summary.TargetAstroId);
+
+            Dictionary<int, SupplyAvailability> supplyByItem = null;
 
             foreach (CombinedLogisticsItem item in exportsByItem.Values)
             {
@@ -489,6 +684,16 @@ namespace Stellogistics
                 EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
                 if (status == EHealthStatus.Critical) summary.CriticalImportCount++;
                 else if (status == EHealthStatus.Warning) summary.WarningImportCount++;
+
+                if (status != EHealthStatus.Healthy && (item.FillRatio + item.InboundTransitRatio) < 0.85f)
+                {
+                    if (supplyByItem == null)
+                    {
+                        supplyByItem = new Dictionary<int, SupplyAvailability>();
+                        CollectGalaxySupplyAvailability(config, summary.GalaxySeed, critPct, warnPct, supplyByItem);
+                    }
+                    EvaluateImportBottleneck(item, status, supplyByItem, targetPlanetId, targetStarId);
+                }
             }
 
             Comparison<CombinedLogisticsItem> comparer = (a, b) =>
@@ -761,6 +966,19 @@ namespace Stellogistics
                         }
                     }
 
+                    if (expItem != null && impItem != null)
+                    {
+                        expItem.IsHub = true;
+                        expItem.HubCounterpartStored = impItem.StoredCount;
+                        expItem.HubCounterpartMax = impItem.MaxCount;
+                        expItem.HubCounterpartSlots = impItem.SlotCount;
+
+                        impItem.IsHub = true;
+                        impItem.HubCounterpartStored = expItem.StoredCount;
+                        impItem.HubCounterpartMax = expItem.MaxCount;
+                        impItem.HubCounterpartSlots = expItem.SlotCount;
+                    }
+
                     bool hasExp = expItem != null && !(excludeFull && expItem.DisplayPercent >= excludeThresholdPct);
                     bool hasImp = impItem != null && !(excludeFull && impItem.DisplayPercent >= excludeThresholdPct);
                     if ((hasExp || hasImp) && config.IsPlanetOrStarIgnored(galaxySeed, planet))
@@ -914,6 +1132,7 @@ namespace Stellogistics
 
             var exportsByItem = new Dictionary<int, CombinedLogisticsItem>();
             var importsByItem = new Dictionary<int, CombinedLogisticsItem>();
+            var supplyByItem = new Dictionary<int, SupplyAvailability>();
 
             StarData[] stars = GameMain.galaxy.stars;
             for (int s = 0; s < stars.Length; s++)
@@ -955,11 +1174,19 @@ namespace Stellogistics
                         ref dummyWork
                     );
 
+                    LinkHubItems(exportsByItem, importsByItem);
+
                     bool isIgnored = config.IsPlanetOrStarIgnored(galaxySeed, planet);
                     bool hadMatchOnPlanet = false;
 
                     foreach (CombinedLogisticsItem expItem in exportsByItem.Values)
                     {
+                        if (!isIgnored)
+                        {
+                            importsByItem.TryGetValue(expItem.ItemId, out CombinedLogisticsItem impOnSame);
+                            RecordPlanetSupplyAvailability(supplyByItem, planet.id, star.id, expItem, impOnSame, critPct, warnPct);
+                        }
+
                         if (!config.IsItemVisibleForAstro(galaxySeed, 0, expItem.ItemId, expItem.Category))
                         {
                             continue;
@@ -1035,6 +1262,14 @@ namespace Stellogistics
                         summary.IgnoredPlanetMatchCount++;
                     }
                 }
+            }
+
+            for (int i = 0; i < summary.ImportingPlanets.Count; i++)
+            {
+                PlanetItemLocationEntry impEntry = summary.ImportingPlanets[i];
+                EHealthStatus status = impEntry.Item.GetHealthStatus(critPct, warnPct);
+                int starId = impEntry.Star != null ? impEntry.Star.id : (impEntry.PlanetId / 100);
+                EvaluateImportBottleneck(impEntry.Item, status, supplyByItem, impEntry.PlanetId, starId);
             }
 
             Comparison<PlanetItemLocationEntry> comparer = (a, b) =>

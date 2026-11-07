@@ -33,11 +33,15 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
 - **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← All`** to return to your Finder overview.
 - **Planet & Star System Ignore Filter**: Exclude abandoned or starter worlds from Finder scans via the inline **`[✕]`** button on Finder rows, the **`Planets`** tab in the Picker, or the toggle in **`Filter ▾`**.
 
-### 3. Instant Bottleneck & Shortage Detection
+### 3. Instant Bottleneck, Throughput & Hub Detection
 - **Color-Coded Health Bars & Badges**:
   - **Red (`EMPTY` / `STARVED` / `LOW`, ≤15%)**: Critical bottleneck—an export source has run out of stock to ship, or an import destination is starved.
   - **Orange (`LOW`, ≤40%)**: Stock is depleting and approaching a shortage.
   - **Green (>40%)**: Healthy buffer.
+- **Logistics / Vessel Throughput Bottleneck Indicator (`⚡+ILS`)**:
+  - Automatically flags importing planets (`⚡+ILS`) whose storage + inbound vessels (`+In-Transit` hatched bar) do not fill capacity while healthy/unclaimed export stock is sitting ready on another planet in the cluster—telling you immediately when you need another importing ILS tower or more vessels rather than more production.
+- **Planet & System Hub Detection (`⇄ Hub`)**:
+  - Automatically detects planets that both import and export the same item and displays a `⇄ Hub (Imp ...)` / `⇄ Hub (Exp ...)` badge with the counterpart capacity right on the row.
 - **Section Header Alert Counters**: Even when the Exports or Imports sections are collapsed, the header displays instant alert tallies (e.g., `2 EMPTY • 1 LOW`).
 - **One-Click Sorting (`Sort: Alert` / `Sort: ID` / `Sort: Pct ↓`)**: Sort ascending by fill percentage (`Alert`), by item ID, or descending by fill percentage (`Pct ↓`).
 
@@ -92,7 +96,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.0.1.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.1.0.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.0.1.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.1.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).

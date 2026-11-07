@@ -349,12 +349,12 @@ namespace Stellogistics
         private static readonly Color HealthyFillColor = new Color(0.18f, 0.68f, 0.42f, 0.18f);
         private static readonly Color HealthyTransitColor = new Color(0.32f, 0.92f, 0.62f, 0.34f);
 
-        private const float HeaderHeight = 74f;
-        private const float StackedHeaderHeight = 96f;
+        private const float HeaderHeight = 76f;
+        private const float StackedHeaderHeight = 100f;
         private const float StackedWidthPlanet = 305f;
         private const float StackedWidthFiveBtns = 355f;
         private const float CollapsedTabWidth = 148f;
-        private const float CollapsedTabHeight = 32f;
+        private const float CollapsedTabHeight = 36f;
         private const float SectionHeaderHeight = 26f;
         private const float RowHeight = 38f;
         private const float RowSpacing = 2f;
@@ -507,7 +507,7 @@ namespace Stellogistics
             };
 
             // Panel Collapse Button (top-left)
-            _panelCollapseBtn = CreateHeaderButton("CollapsePanelBtn", _headerRect, new Vector2(8f, -6f), new Vector2(22f, 20f), false, out _panelCollapseBtnText);
+            _panelCollapseBtn = CreateHeaderButton("CollapsePanelBtn", _headerRect, new Vector2(8f, -8f), new Vector2(22f, 20f), false, out _panelCollapseBtnText);
             _panelCollapseBtnText.text = "▼";
             _panelCollapseBtn.onClick.AddListener(OnTogglePanelCollapseClicked);
 
@@ -516,8 +516,8 @@ namespace Stellogistics
             _titleText.rectTransform.anchorMin = new Vector2(0f, 1f);
             _titleText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _titleText.rectTransform.pivot = new Vector2(0f, 1f);
-            _titleText.rectTransform.anchoredPosition = new Vector2(34f, -6f);
-            _titleText.rectTransform.sizeDelta = new Vector2(-312f, 20f);
+            _titleText.rectTransform.anchoredPosition = new Vector2(36f, -8f);
+            _titleText.rectTransform.sizeDelta = new Vector2(-314f, 20f);
             _titleText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _titleText.verticalOverflow = VerticalWrapMode.Truncate;
             _titleText.resizeTextForBestFit = true;
@@ -526,21 +526,21 @@ namespace Stellogistics
 
             // Top-right Header Buttons with uniform 4px spacing:
             // [-272..-222: Ext Only / Pick Item] [-218..-172: Finder / ← Back] [-168..-112: Sort] [-108..-62: Filter ▾] [-58..-6: Options ▾]
-            _filterModeBtn = CreateHeaderButton("FilterModeBtn", _headerRect, new Vector2(-222f, -6f), new Vector2(50f, 20f), true, out _filterModeBtnText);
+            _filterModeBtn = CreateHeaderButton("FilterModeBtn", _headerRect, new Vector2(-222f, -8f), new Vector2(50f, 20f), true, out _filterModeBtnText);
             _filterModeBtn.onClick.AddListener(OnFilterModeButtonClicked);
 
-            _finderModeBtn = CreateHeaderButton("FinderModeBtn", _headerRect, new Vector2(-172f, -6f), new Vector2(46f, 20f), true, out _finderModeBtnText);
+            _finderModeBtn = CreateHeaderButton("FinderModeBtn", _headerRect, new Vector2(-172f, -8f), new Vector2(46f, 20f), true, out _finderModeBtnText);
             _finderModeBtnText.text = "Finder";
             _finderModeBtn.onClick.AddListener(OnFinderModeButtonClicked);
 
-            _sortModeBtn = CreateHeaderButton("SortModeBtn", _headerRect, new Vector2(-112f, -6f), new Vector2(56f, 20f), true, out _sortModeBtnText);
+            _sortModeBtn = CreateHeaderButton("SortModeBtn", _headerRect, new Vector2(-112f, -8f), new Vector2(56f, 20f), true, out _sortModeBtnText);
             _sortModeBtn.onClick.AddListener(OnSortModeButtonClicked);
 
-            _optionsBtn = CreateHeaderButton("OptionsBtn", _headerRect, new Vector2(-62f, -6f), new Vector2(46f, 20f), true, out _optionsBtnText);
+            _optionsBtn = CreateHeaderButton("OptionsBtn", _headerRect, new Vector2(-62f, -8f), new Vector2(46f, 20f), true, out _optionsBtnText);
             _optionsBtnText.text = "Filter ▾";
             _optionsBtn.onClick.AddListener(OnOptionsButtonClicked);
 
-            _generalOptionsBtn = CreateHeaderButton("GeneralOptionsBtn", _headerRect, new Vector2(-6f, -6f), new Vector2(52f, 20f), true, out _generalOptionsBtnText);
+            _generalOptionsBtn = CreateHeaderButton("GeneralOptionsBtn", _headerRect, new Vector2(-6f, -8f), new Vector2(52f, 20f), true, out _generalOptionsBtnText);
             _generalOptionsBtnText.text = "Options ▾";
             _generalOptionsBtn.onClick.AddListener(OnGeneralOptionsButtonClicked);
 
@@ -549,7 +549,7 @@ namespace Stellogistics
             _subtitleText.rectTransform.anchorMin = new Vector2(0f, 1f);
             _subtitleText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _subtitleText.rectTransform.pivot = new Vector2(0f, 1f);
-            _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -31f);
+            _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -33f);
             _subtitleText.rectTransform.sizeDelta = new Vector2(-20f, 18f);
 
             // Fleet / Warper Info
@@ -557,7 +557,7 @@ namespace Stellogistics
             _fleetInfoText.rectTransform.anchorMin = new Vector2(0f, 1f);
             _fleetInfoText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _fleetInfoText.rectTransform.pivot = new Vector2(0f, 1f);
-            _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -50f);
+            _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -52f);
             _fleetInfoText.rectTransform.sizeDelta = new Vector2(-20f, 18f);
 
             // Scroll View
@@ -595,7 +595,7 @@ namespace Stellogistics
             _scrollRect.vertical = true;
             _scrollRect.movementType = ScrollRect.MovementType.Clamped;
             _scrollRect.scrollSensitivity = 32f;
-            _scrollRect.verticalScrollbar = _verticalScrollbar;
+            _scrollRect.verticalScrollbar = null;
 
             // Empty State
             _emptyStateGo = new GameObject("EmptyState", typeof(RectTransform));
@@ -642,11 +642,11 @@ namespace Stellogistics
             sbRect.anchorMin = new Vector2(1f, 0f);
             sbRect.anchorMax = new Vector2(1f, 1f);
             sbRect.pivot = new Vector2(1f, 1f);
-            sbRect.anchoredPosition = new Vector2(-1f, -2f);
+            sbRect.anchoredPosition = Vector2.zero;
             sbRect.sizeDelta = new Vector2(ScrollbarWidth, -14f);
 
             Image trackImg = _scrollbarGo.GetComponent<Image>();
-            trackImg.color = new Color(0.03f, 0.05f, 0.09f, 0.85f);
+            trackImg.color = new Color(0.03f, 0.05f, 0.09f, 0.96f);
             trackImg.raycastTarget = true;
 
             GameObject slidingAreaGo = new GameObject("SlidingArea", typeof(RectTransform));
@@ -655,7 +655,7 @@ namespace Stellogistics
             slidingRect.anchorMin = Vector2.zero;
             slidingRect.anchorMax = Vector2.one;
             slidingRect.offsetMin = new Vector2(1f, 1f);
-            slidingRect.offsetMax = new Vector2(-1f, -1f);
+            slidingRect.offsetMax = new Vector2(0f, -1f);
 
             GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
             handleGo.transform.SetParent(slidingRect, false);
@@ -746,8 +746,8 @@ namespace Stellogistics
                     // Immediately apply collapsed tab geometry so it never flashes a half-collapsed state between frames
                     _titleText.text = "Stellogistics";
                     _titleText.alignment = TextAnchor.MiddleCenter;
-                    _titleText.rectTransform.anchoredPosition = new Vector2(30f, -6f);
-                    _titleText.rectTransform.sizeDelta = new Vector2(-36f, 20f);
+                    _titleText.rectTransform.anchoredPosition = new Vector2(32f, -8f);
+                    _titleText.rectTransform.sizeDelta = new Vector2(-38f, 20f);
                     _subtitleText.gameObject.SetActive(false);
                     _fleetInfoText.gameObject.SetActive(false);
                     _filterModeBtn.gameObject.SetActive(false);
@@ -831,7 +831,7 @@ namespace Stellogistics
             _scrollViewportRect.anchoredPosition = new Vector2(0f, -currentHeaderH);
 
             _titleText.alignment = TextAnchor.MiddleLeft;
-            _titleText.rectTransform.anchoredPosition = new Vector2(34f, -6f);
+            _titleText.rectTransform.anchoredPosition = new Vector2(36f, -8f);
 
             RectTransform filterBtnRect = _filterModeBtn.GetComponent<RectTransform>();
             RectTransform finderBtnRect = _finderModeBtn.GetComponent<RectTransform>();
@@ -842,37 +842,37 @@ namespace Stellogistics
             if (stacked)
             {
                 // Row 1: [▼] + Title + Rightmost buttons ([Filter ▾] [Options ▾])
-                _titleText.rectTransform.sizeDelta = new Vector2(-146f, 20f);
-                optBtnRect.anchoredPosition = new Vector2(-62f, -6f);
-                genOptBtnRect.anchoredPosition = new Vector2(-6f, -6f);
+                _titleText.rectTransform.sizeDelta = new Vector2(-148f, 20f);
+                optBtnRect.anchoredPosition = new Vector2(-62f, -8f);
+                genOptBtnRect.anchoredPosition = new Vector2(-6f, -8f);
 
-                // Row 2: Action buttons ([Netted / Pick Item] [Finder / ← Back] [Sort]) stacked neatly on the right at y = -28f
-                filterBtnRect.anchoredPosition = new Vector2(-116f, -28f);
-                finderBtnRect.anchoredPosition = new Vector2(-66f, -28f);
-                sortBtnRect.anchoredPosition = new Vector2(-6f, -28f);
+                // Row 2: Action buttons ([Netted / Pick Item] [Finder / ← Back] [Sort]) stacked with a matching 4px vertical gap at y = -32f
+                filterBtnRect.anchoredPosition = new Vector2(-116f, -32f);
+                finderBtnRect.anchoredPosition = new Vector2(-66f, -32f);
+                sortBtnRect.anchoredPosition = new Vector2(-6f, -32f);
 
-                _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -53f);
-                _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -72f);
+                _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -57f);
+                _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -76f);
 
-                if (_optionsMenuRect != null) _optionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
-                if (_generalOptionsMenuRect != null) _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+                if (_optionsMenuRect != null) _optionsMenuRect.anchoredPosition = new Vector2(-4f, -32f);
+                if (_generalOptionsMenuRect != null) _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -32f);
             }
             else
             {
                 // Single top row: [▼] + Title on left, Buttons on right
-                _titleText.rectTransform.sizeDelta = new Vector2(showFifthButton ? -312f : -258f, 20f);
+                _titleText.rectTransform.sizeDelta = new Vector2(showFifthButton ? -314f : -260f, 20f);
 
-                filterBtnRect.anchoredPosition = new Vector2(-222f, -6f);
-                finderBtnRect.anchoredPosition = new Vector2(-172f, -6f);
-                sortBtnRect.anchoredPosition = new Vector2(-112f, -6f);
-                optBtnRect.anchoredPosition = new Vector2(-62f, -6f);
-                genOptBtnRect.anchoredPosition = new Vector2(-6f, -6f);
+                filterBtnRect.anchoredPosition = new Vector2(-222f, -8f);
+                finderBtnRect.anchoredPosition = new Vector2(-172f, -8f);
+                sortBtnRect.anchoredPosition = new Vector2(-112f, -8f);
+                optBtnRect.anchoredPosition = new Vector2(-62f, -8f);
+                genOptBtnRect.anchoredPosition = new Vector2(-6f, -8f);
 
-                _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -31f);
-                _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -50f);
+                _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -33f);
+                _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -52f);
 
-                if (_optionsMenuRect != null) _optionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
-                if (_generalOptionsMenuRect != null) _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+                if (_optionsMenuRect != null) _optionsMenuRect.anchoredPosition = new Vector2(-4f, -32f);
+                if (_generalOptionsMenuRect != null) _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -32f);
             }
 
             return currentHeaderH;
@@ -893,32 +893,28 @@ namespace Stellogistics
                 ? Mathf.Min(maxScrollHeight, _activeContentHeight)
                 : Mathf.Max(MinScrollHeight, maxScrollHeight);
             bool needsScrollbar = _activeContentHeight > viewportHeight + 0.5f;
-            if (_scrollbarGo.activeSelf != needsScrollbar)
-            {
-                _scrollbarGo.SetActive(needsScrollbar);
-            }
+            SetScrollbarActive(needsScrollbar);
 
-            float rightInset = needsScrollbar ? -(ScrollbarWidth + 2f) : 0f;
+            float rightInset = needsScrollbar ? -(ScrollbarWidth + 1f) : 0f;
+            _scrollContentRect.anchoredPosition = new Vector2(0f, _scrollContentRect.anchoredPosition.y);
             _scrollContentRect.sizeDelta = new Vector2(rightInset, _activeContentHeight);
             _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
             _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
+        }
 
-            // Resize row fill bars to match the new panel width
-            float rowAvailableWidth = panelWidth + rightInset;
-            for (int i = 0; i < _rowPool.Count; i++)
+        private void SetScrollbarActive(bool active)
+        {
+            if (_scrollRect != null)
             {
-                ItemRowView row = _rowPool[i];
-                if (row.RootGo.activeSelf && row.FillBarRect != null)
+                Scrollbar targetSb = active ? _verticalScrollbar : null;
+                if (_scrollRect.verticalScrollbar != targetSb)
                 {
-                    float fillW = row.FillRatioCached * rowAvailableWidth;
-                    row.FillBarRect.sizeDelta = new Vector2(fillW, 0f);
-                    if (row.TransitBarRect != null)
-                    {
-                        float transitW = row.TransitRatioCached * rowAvailableWidth;
-                        row.TransitBarRect.anchoredPosition = new Vector2(fillW, 0f);
-                        row.TransitBarRect.sizeDelta = new Vector2(transitW, 0f);
-                    }
+                    _scrollRect.verticalScrollbar = targetSb;
                 }
+            }
+            if (_scrollbarGo != null && _scrollbarGo.activeSelf != active)
+            {
+                _scrollbarGo.SetActive(active);
             }
         }
 
@@ -2108,8 +2104,8 @@ namespace Stellogistics
             fillRect.anchorMin = new Vector2(0f, 0f);
             fillRect.anchorMax = new Vector2(0f, 1f);
             fillRect.pivot = new Vector2(0f, 0.5f);
-            fillRect.anchoredPosition = Vector2.zero;
-            fillRect.sizeDelta = new Vector2(0f, 0f);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
             Image fillImg = fillGo.GetComponent<Image>();
             fillImg.color = HealthyFillColor;
             fillImg.raycastTarget = false;
@@ -2120,8 +2116,8 @@ namespace Stellogistics
             transitRect.anchorMin = new Vector2(0f, 0f);
             transitRect.anchorMax = new Vector2(0f, 1f);
             transitRect.pivot = new Vector2(0f, 0.5f);
-            transitRect.anchoredPosition = Vector2.zero;
-            transitRect.sizeDelta = new Vector2(0f, 0f);
+            transitRect.offsetMin = Vector2.zero;
+            transitRect.offsetMax = Vector2.zero;
             Image transitImg = transitGo.GetComponent<Image>();
             transitImg.sprite = GetOrCreateHatchedTransitSprite();
             transitImg.type = Image.Type.Tiled;
@@ -2177,35 +2173,48 @@ namespace Stellogistics
             subStatusText.rectTransform.offsetMin = new Vector2(0f, 1f);
             subStatusText.rectTransform.offsetMax = new Vector2(-10f, 0f);
 
-            // Inline [✕] button on Finder rows to quickly ignore/mute an abandoned planet right from the list
-            GameObject muteBtnGo = new GameObject("MutePlanetBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
+            // Subtle, unobtrusive [✕] button on Finder rows that only lights up on hover
+            GameObject muteBtnGo = new GameObject("MutePlanetBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(ItemCellHoverHandler));
             muteBtnGo.transform.SetParent(rowRect, false);
             RectTransform muteRect = muteBtnGo.GetComponent<RectTransform>();
             muteRect.anchorMin = new Vector2(1f, 0.5f);
             muteRect.anchorMax = new Vector2(1f, 0.5f);
             muteRect.pivot = new Vector2(1f, 0.5f);
             muteRect.anchoredPosition = new Vector2(-4f, 0f);
-            muteRect.sizeDelta = new Vector2(18f, 18f);
+            muteRect.sizeDelta = new Vector2(15f, 15f);
+
+            Color muteBgIdle = new Color(0f, 0f, 0f, 0.01f);
+            Color muteBgHover = new Color(0.42f, 0.14f, 0.18f, 0.88f);
+            Color muteTxtIdle = new Color(0.62f, 0.74f, 0.86f, 0.32f);
+            Color muteTxtHover = new Color(1f, 0.80f, 0.84f, 1f);
 
             Image muteBg = muteBtnGo.GetComponent<Image>();
-            muteBg.color = new Color(0.28f, 0.14f, 0.17f, 0.90f);
-
-            Outline muteOutline = muteBtnGo.GetComponent<Outline>();
-            muteOutline.effectColor = new Color(0.75f, 0.34f, 0.40f, 0.55f);
-            muteOutline.effectDistance = new Vector2(1f, -1f);
+            muteBg.color = muteBgIdle;
 
             Button muteBtn = muteBtnGo.GetComponent<Button>();
             ColorBlock muteCb = muteBtn.colors;
             muteCb.normalColor = Color.white;
-            muteCb.highlightedColor = new Color(1.40f, 1.25f, 1.25f, 1f);
-            muteCb.pressedColor = new Color(0.80f, 0.70f, 0.70f, 1f);
+            muteCb.highlightedColor = Color.white;
+            muteCb.pressedColor = new Color(0.82f, 0.72f, 0.72f, 1f);
             muteBtn.colors = muteCb;
 
-            Text muteTxt = CreateText("Text", muteRect, 10, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.85f, 0.95f));
+            Text muteTxt = CreateText("Text", muteRect, 9, FontStyle.Normal, TextAnchor.MiddleCenter, muteTxtIdle);
             muteTxt.rectTransform.anchorMin = Vector2.zero;
             muteTxt.rectTransform.anchorMax = Vector2.one;
             muteTxt.rectTransform.sizeDelta = Vector2.zero;
             muteTxt.text = "✕";
+
+            ItemCellHoverHandler muteHover = muteBtnGo.GetComponent<ItemCellHoverHandler>();
+            muteHover.OnHoverEnter = () =>
+            {
+                muteBg.color = muteBgHover;
+                muteTxt.color = muteTxtHover;
+            };
+            muteHover.OnHoverExit = () =>
+            {
+                muteBg.color = muteBgIdle;
+                muteTxt.color = muteTxtIdle;
+            };
             muteBtnGo.SetActive(false);
 
             var view = new ItemRowView
@@ -2241,6 +2250,7 @@ namespace Stellogistics
             txt.fontStyle = style;
             txt.alignment = align;
             txt.color = color;
+            txt.supportRichText = true;
             txt.horizontalOverflow = HorizontalWrapMode.Overflow;
             txt.verticalOverflow = VerticalWrapMode.Overflow;
             txt.raycastTarget = false;
@@ -2716,8 +2726,8 @@ namespace Stellogistics
             {
                 _titleText.text = "Stellogistics";
                 _titleText.alignment = TextAnchor.MiddleCenter;
-                _titleText.rectTransform.anchoredPosition = new Vector2(30f, -6f);
-                _titleText.rectTransform.sizeDelta = new Vector2(-36f, 20f);
+                _titleText.rectTransform.anchoredPosition = new Vector2(32f, -8f);
+                _titleText.rectTransform.sizeDelta = new Vector2(-38f, 20f);
                 _subtitleText.gameObject.SetActive(false);
                 _fleetInfoText.gameObject.SetActive(false);
                 _filterModeBtn.gameObject.SetActive(false);
@@ -2799,7 +2809,8 @@ namespace Stellogistics
 
                 _activeContentHeight = MinScrollHeight;
                 float emptyViewportHeight = Mathf.Max(MinScrollHeight, maxScrollHeight);
-                _scrollbarGo.SetActive(false);
+                SetScrollbarActive(false);
+                _scrollContentRect.anchoredPosition = Vector2.zero;
                 _scrollContentRect.sizeDelta = new Vector2(0f, _activeContentHeight);
                 _scrollViewportRect.sizeDelta = new Vector2(0f, emptyViewportHeight);
                 _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + emptyViewportHeight);
@@ -2834,7 +2845,7 @@ namespace Stellogistics
                 ? Mathf.Min(maxScrollHeight, _activeContentHeight)
                 : Mathf.Max(MinScrollHeight, maxScrollHeight);
             bool needsScrollbar = _activeContentHeight > viewportHeight + 0.5f;
-            float rightInset = needsScrollbar ? -(ScrollbarWidth + 2f) : 0f;
+            float rightInset = needsScrollbar ? -(ScrollbarWidth + 1f) : 0f;
             float rowAvailableWidth = panelWidth + rightInset;
 
             float cursorY = 0f;
@@ -2900,7 +2911,8 @@ namespace Stellogistics
 
             HideRowsFrom(rowIndex);
 
-            _scrollbarGo.SetActive(needsScrollbar);
+            SetScrollbarActive(needsScrollbar);
+            _scrollContentRect.anchoredPosition = new Vector2(0f, _scrollContentRect.anchoredPosition.y);
             _scrollContentRect.sizeDelta = new Vector2(rightInset, _activeContentHeight);
             _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
             _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
@@ -2959,9 +2971,11 @@ namespace Stellogistics
             row.StatusStripeImage.color = accentColor;
             row.FillBarImage.color = fillColor;
             float fillRatio = Mathf.Clamp01(item.FillRatio);
-            float fillWidth = fillRatio * rowWidth;
             row.FillRatioCached = fillRatio;
-            row.FillBarRect.sizeDelta = new Vector2(fillWidth, 0f);
+            row.FillBarRect.anchorMin = new Vector2(0f, 0f);
+            row.FillBarRect.anchorMax = new Vector2(fillRatio, 1f);
+            row.FillBarRect.offsetMin = Vector2.zero;
+            row.FillBarRect.offsetMax = Vector2.zero;
 
             float transitRatio = _config.ShowInTransitBar.Value ? item.InboundTransitRatio : 0f;
             row.TransitRatioCached = transitRatio;
@@ -2972,8 +2986,10 @@ namespace Stellogistics
                     row.TransitBarRect.gameObject.SetActive(true);
                 }
                 row.TransitBarImage.color = transitColor;
-                row.TransitBarRect.anchoredPosition = new Vector2(fillWidth, 0f);
-                row.TransitBarRect.sizeDelta = new Vector2(transitRatio * rowWidth, 0f);
+                row.TransitBarRect.anchorMin = new Vector2(fillRatio, 0f);
+                row.TransitBarRect.anchorMax = new Vector2(Mathf.Clamp01(fillRatio + transitRatio), 1f);
+                row.TransitBarRect.offsetMin = Vector2.zero;
+                row.TransitBarRect.offsetMax = Vector2.zero;
             }
             else if (row.TransitBarRect.gameObject.activeSelf)
             {
@@ -3010,6 +3026,12 @@ namespace Stellogistics
             {
                 slotDesc = $"{item.PlanetCount} Planets • {slotDesc}";
             }
+            if (item.IsHub)
+            {
+                string counterRole = item.Logic == ELogisticStorage.Supply ? "Imp" : "Exp";
+                string counterMax = CombinedLogisticsItem.FormatAmount(item.HubCounterpartMax);
+                slotDesc = $"{slotDesc} • <color=#5CE1FF>⇄ Hub ({counterRole} {counterMax})</color>";
+            }
             row.MetaText.text = slotDesc;
 
             string storedStr = CombinedLogisticsItem.FormatAmount(item.StoredCount);
@@ -3032,6 +3054,10 @@ namespace Stellogistics
                 statusTag = "LOW ";
             }
 
+            string bottleneckPrefix = item.HasLogisticsBottleneck
+                ? "<color=#FFD24C>⚡+ILS</color> • "
+                : "";
+
             string transitStr = "";
             if (item.InTransitOrder != 0)
             {
@@ -3039,7 +3065,7 @@ namespace Stellogistics
                 transitStr = $" ({sign}{CombinedLogisticsItem.FormatAmount(item.InTransitOrder)})";
             }
 
-            row.SubStatusText.text = $"{statusTag}{pct}%{transitStr}";
+            row.SubStatusText.text = $"{bottleneckPrefix}{statusTag}{pct}%{transitStr}";
             row.SubStatusText.color = status == EHealthStatus.Healthy
                 ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
                 : accentColor;
@@ -3085,8 +3111,8 @@ namespace Stellogistics
             {
                 _titleText.text = "Stellogistics";
                 _titleText.alignment = TextAnchor.MiddleCenter;
-                _titleText.rectTransform.anchoredPosition = new Vector2(30f, -6f);
-                _titleText.rectTransform.sizeDelta = new Vector2(-36f, 20f);
+                _titleText.rectTransform.anchoredPosition = new Vector2(32f, -8f);
+                _titleText.rectTransform.sizeDelta = new Vector2(-38f, 20f);
                 _subtitleText.gameObject.SetActive(false);
                 _fleetInfoText.gameObject.SetActive(false);
                 _filterModeBtn.gameObject.SetActive(false);
@@ -3183,7 +3209,8 @@ namespace Stellogistics
 
                 _activeContentHeight = MinScrollHeight;
                 float emptyViewportHeight = Mathf.Max(MinScrollHeight, maxScrollHeight);
-                _scrollbarGo.SetActive(false);
+                SetScrollbarActive(false);
+                _scrollContentRect.anchoredPosition = Vector2.zero;
                 _scrollContentRect.sizeDelta = new Vector2(0f, _activeContentHeight);
                 _scrollViewportRect.sizeDelta = new Vector2(0f, emptyViewportHeight);
                 _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + emptyViewportHeight);
@@ -3217,7 +3244,7 @@ namespace Stellogistics
                 ? Mathf.Min(maxScrollHeight, _activeContentHeight)
                 : Mathf.Max(MinScrollHeight, maxScrollHeight);
             bool needsScrollbar = _activeContentHeight > viewportHeight + 0.5f;
-            float rightInset = needsScrollbar ? -(ScrollbarWidth + 2f) : 0f;
+            float rightInset = needsScrollbar ? -(ScrollbarWidth + 1f) : 0f;
             float rowAvailableWidth = panelWidth + rightInset;
 
             float cursorY = 0f;
@@ -3283,7 +3310,8 @@ namespace Stellogistics
 
             HideRowsFrom(rowIndex);
 
-            _scrollbarGo.SetActive(needsScrollbar);
+            SetScrollbarActive(needsScrollbar);
+            _scrollContentRect.anchoredPosition = new Vector2(0f, _scrollContentRect.anchoredPosition.y);
             _scrollContentRect.sizeDelta = new Vector2(rightInset, _activeContentHeight);
             _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
             _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
@@ -3326,9 +3354,11 @@ namespace Stellogistics
             row.StatusStripeImage.color = accentColor;
             row.FillBarImage.color = fillColor;
             float fillRatio = Mathf.Clamp01(item.FillRatio);
-            float fillWidth = fillRatio * rowWidth;
             row.FillRatioCached = fillRatio;
-            row.FillBarRect.sizeDelta = new Vector2(fillWidth, 0f);
+            row.FillBarRect.anchorMin = new Vector2(0f, 0f);
+            row.FillBarRect.anchorMax = new Vector2(fillRatio, 1f);
+            row.FillBarRect.offsetMin = Vector2.zero;
+            row.FillBarRect.offsetMax = Vector2.zero;
 
             float transitRatio = _config.ShowInTransitBar.Value ? item.InboundTransitRatio : 0f;
             row.TransitRatioCached = transitRatio;
@@ -3339,8 +3369,10 @@ namespace Stellogistics
                     row.TransitBarRect.gameObject.SetActive(true);
                 }
                 row.TransitBarImage.color = transitColor;
-                row.TransitBarRect.anchoredPosition = new Vector2(fillWidth, 0f);
-                row.TransitBarRect.sizeDelta = new Vector2(transitRatio * rowWidth, 0f);
+                row.TransitBarRect.anchorMin = new Vector2(fillRatio, 0f);
+                row.TransitBarRect.anchorMax = new Vector2(Mathf.Clamp01(fillRatio + transitRatio), 1f);
+                row.TransitBarRect.offsetMin = Vector2.zero;
+                row.TransitBarRect.offsetMax = Vector2.zero;
             }
             else if (row.TransitBarRect.gameObject.activeSelf)
             {
@@ -3374,7 +3406,23 @@ namespace Stellogistics
             {
                 slotDesc = $"{item.SlotCount} ILS";
             }
-            row.MetaText.text = $"{entry.StarName} • {slotDesc}";
+            if (item.IsHub)
+            {
+                string counterRole = item.Logic == ELogisticStorage.Supply ? "Imp" : "Exp";
+                string counterMax = CombinedLogisticsItem.FormatAmount(item.HubCounterpartMax);
+                string hubBadge = $"<color=#5CE1FF>⇄ Hub ({counterRole} {counterMax})</color>";
+                bool starRedundant = rowWidth < 370f &&
+                    !string.IsNullOrEmpty(entry.StarName) &&
+                    !string.IsNullOrEmpty(entry.PlanetName) &&
+                    entry.PlanetName.StartsWith(entry.StarName, StringComparison.OrdinalIgnoreCase);
+                row.MetaText.text = starRedundant
+                    ? $"{slotDesc} • {hubBadge}"
+                    : $"{entry.StarName} • {slotDesc} • {hubBadge}";
+            }
+            else
+            {
+                row.MetaText.text = $"{entry.StarName} • {slotDesc}";
+            }
 
             string storedStr = CombinedLogisticsItem.FormatAmount(item.StoredCount);
             string maxStr = CombinedLogisticsItem.FormatAmount(item.MaxCount);
@@ -3396,6 +3444,10 @@ namespace Stellogistics
                 statusTag = "LOW ";
             }
 
+            string bottleneckPrefix = item.HasLogisticsBottleneck
+                ? "<color=#FFD24C>⚡+ILS</color> • "
+                : "";
+
             string transitStr = "";
             if (item.InTransitOrder != 0)
             {
@@ -3403,13 +3455,13 @@ namespace Stellogistics
                 transitStr = $" ({sign}{CombinedLogisticsItem.FormatAmount(item.InTransitOrder)})";
             }
 
-            row.SubStatusText.text = $"{statusTag}{pct}%{transitStr}";
+            row.SubStatusText.text = $"{bottleneckPrefix}{statusTag}{pct}%{transitStr}";
             row.SubStatusText.color = status == EHealthStatus.Healthy
                 ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
                 : accentColor;
 
-            row.AmountText.rectTransform.offsetMax = new Vector2(-28f, -1f);
-            row.SubStatusText.rectTransform.offsetMax = new Vector2(-28f, 0f);
+            row.AmountText.rectTransform.offsetMax = new Vector2(-22f, -1f);
+            row.SubStatusText.rectTransform.offsetMax = new Vector2(-22f, 0f);
             if (row.MuteBtnGo != null && !row.MuteBtnGo.activeSelf)
             {
                 row.MuteBtnGo.SetActive(true);
