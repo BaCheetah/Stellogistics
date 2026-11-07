@@ -25,38 +25,37 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
 
 ### 1. Combined Planet & Star System Logistics
 - **One Row Per Item**: Combines all Remote Supply (**Exports**) and Remote Demand (**Imports**) slots for the same item across the selected Planet or Star System.
-- **Complete Capacity & Transit Breakdown**: Shows `Stored / Max` capacity, fill percentage, active in-transit vessel cargo (`+` inbound / `-` outbound), number of planets involved, and total station slots (`ILS` + Gas Giant Orbital Collectors `OC`).
+- **Complete Capacity & Hatched `+In-Transit` Breakdown**: Shows `Stored / Max` capacity, fill percentage, a **diagonal hatched bar extension** for inbound vessel cargo (`+In-Transit`), number of planets involved, and total station slots (`ILS` + Gas Giant Orbital Collectors `OC`).
 - **Fleet & Warper Readiness**: Header displays total ILS & Orbital Collector counts, idle vs. total Logistics Vessels, and available Space Warpers.
 
-### 2. Instant Bottleneck & Shortage Detection
+### 2. Galaxy Item & Bottleneck Finder (`Finder`)
+- **Cluster-Wide Search & Bottleneck Scanner**: Locate every planet exporting or importing checked items across the entire star cluster, or toggle **`! ≤40% Only`** to scan all checked items for shortages (`EMPTY`, `STARVED`, `LOW`).
+- **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← All`** to return to your Finder overview.
+- **Planet & Star System Ignore Filter**: Exclude abandoned or starter worlds from Finder scans via the inline **`[✕]`** button on Finder rows, the **`Planets`** tab in the Picker, or the toggle in **`Filter ▾`**.
+
+### 3. Instant Bottleneck & Shortage Detection
 - **Color-Coded Health Bars & Badges**:
   - **Red (`EMPTY` / `STARVED` / `LOW`, ≤15%)**: Critical bottleneck—an export source has run out of stock to ship, or an import destination is starved.
   - **Orange (`LOW`, ≤40%)**: Stock is depleting and approaching a shortage.
   - **Green (>40%)**: Healthy buffer.
-- **Section Header Alert Counters**: Even when the Exports or Imports sections are collapsed, the header displays instant alert tallies (e.g., `2 EMPTY • 1 LOW` or `ALL OK`).
-- **One-Click Sorting (`Sort: Alert` / `Sort: ID` / `Sort: Amt`)**: Defaults to sorting the most critical shortages straight to the top of your list.
+- **Section Header Alert Counters**: Even when the Exports or Imports sections are collapsed, the header displays instant alert tallies (e.g., `2 EMPTY • 1 LOW`).
+- **One-Click Sorting (`Sort: Alert` / `Sort: ID` / `Sort: Pct ↓`)**: Sort ascending by fill percentage (`Alert`), by item ID, or descending by fill percentage (`Pct ↓`).
 
-### 3. Smart Star System Trade Modes
+### 4. Smart Star System Trade Modes
 When viewing a whole **Star System**, cycle between three aggregation modes:
 - **`Ext Only` (Interstellar Smart)**: Automatically hides purely local intra-system shuttling (e.g. Planet A mining ore for Planet B's smelters inside the same system, or stations limited to `< 1 LY` range) so you only see true interstellar imports and exports.
 - **`Netted` (Net Intra-System)**: Nets internal star system supply against internal demand.
 - **`All Slots`**: Displays every remote supply and demand slot across all planets in the system.
 
-### 4. Global Item & Status Filters (`Filter ▾`)
-Filter settings apply globally across the entire Starmap so you can isolate a single item (e.g. via `✕ Uncheck All` → click item) and rapidly scan across planets and star systems to find where it is exported or imported:
-- **6 Quick Category Checkboxes**: Quickly toggle *Raw Resources (Ores, Gas)*, *Materials & Ingots*, *Components & Parts*, *Buildings & Structures*, *Fuel, Warpers & Vessels*, and *Science Matrices*.
-- **Exclude Full / Freshly-Tapped Storages (`≥90%` / `100%` / `>40%`)**: Hide full or freshly-tapped export/import storages so you can focus exclusively on active bottlenecks.
-- **Spoiler-Free `14 × 8` Custom Item & Building Picker (`Custom`)**:
-  - Modeled after DSP's native item grid with **Items** and **Buildings** tabs, plus **`✓ Check All`** and **`✕ Uncheck All`** bulk action buttons.
-  - **Spoiler-Free**: Automatically hides items and buildings that don't have storage anywhere in your galaxy yet, so unresearched tech is never spoiled.
-  - **Smart Placement**: Automatically opens to the right or left of the main panel depending on available screen space, and can also be dragged independently.
+### 5. Unified Item, Building & Planet Picker (`Filter ▾` & `Pick Item`)
+- **6 Quick Category Checkboxes & Threshold Filter**: Quickly toggle item categories or hide full/tapped storages (`≥90%` / `100%` / `>40%`).
+- **Unified `14 × 8` Picker (`Items`, `Buildings`, `Planets`)**:
+  - One shared, spoiler-free picker window across both Starmap filtering and the Galaxy Finder, with **`✓ Check All`**, **`✕ Uncheck All`**, and **`! ≤40% Only`** controls.
 
-### 5. Flexible, Unobtrusive Window Management
-- **Freely Draggable**: Drag the panel anywhere on screen—even partially off-screen—without restrictive boundary snapping.
-- **Lower-Right Resize Grip (`◢`)**:
-  - Freely resize both width and height.
-  - **Multi-Stage Drag Collapsing**: Dragging the resize grip upward smoothly collapses the Exports/Imports lists first, and dragging all the way up collapses the entire window into a compact **`Stellogistics` taskbar tab**.
-- **Scroll-Safe**: Scrolling through long item lists or hovering the Stellogistics UI automatically blocks Starmap camera zooming and prevents background 3D planets from stealing focus.
+### 6. Flexible Window Management & `Options ▾`
+- **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), Starmap hover behavior, or reset UI position and size.
+- **Freely Draggable & Resizable (`◢`)**:
+  - Supports custom heights (including intentional empty space without snapping back), responsive two-row header button stacking at narrow widths, and multi-stage drag collapsing into a compact **`Stellogistics` taskbar tab**.
 
 ---
 
@@ -93,7 +92,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-1.1.0.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.0.0.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-1.1.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.0.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).

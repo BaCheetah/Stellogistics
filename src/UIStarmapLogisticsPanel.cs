@@ -158,14 +158,45 @@ namespace Stellogistics
             public GameObject RootGo;
             public RectTransform RootRect;
             public Image BgImage;
+            public Button RowButton;
+            public Action OnRowClick;
+            public GameObject MuteBtnGo;
+            public Action OnMuteClick;
             public RectTransform FillBarRect;
             public Image FillBarImage;
+            public float FillRatioCached;
+            public RectTransform TransitBarRect;
+            public Image TransitBarImage;
+            public float TransitRatioCached;
             public Image StatusStripeImage;
             public Image IconImage;
             public Text NameText;
             public Text MetaText;
             public Text AmountText;
             public Text SubStatusText;
+        }
+
+        private class PlanetFilterRowView
+        {
+            public GameObject RootGo;
+            public RectTransform RootRect;
+            public Image BgImage;
+            public Button Btn;
+            public Image CheckBoxBg;
+            public Text CheckMarkText;
+            public Text NameText;
+            public Text MetaText;
+            public Action OnClick;
+        }
+
+        private class GeneralToggleRow
+        {
+            public Func<bool> Getter;
+            public Action Toggler;
+            public Button Btn;
+            public Image CheckBoxBg;
+            public Text CheckMarkText;
+            public Text LabelText;
         }
 
         private class FilterToggleRow
@@ -197,7 +228,9 @@ namespace Stellogistics
         private Image _panelBg;
         private PointerHoverTracker _panelHoverTracker;
         private PointerHoverTracker _optionsHoverTracker;
+        private PointerHoverTracker _generalOptionsHoverTracker;
         private PointerHoverTracker _customPickerHoverTracker;
+        private Sprite _hatchedTransitSprite;
 
         private Button _panelCollapseBtn;
         private Text _panelCollapseBtnText;
@@ -207,10 +240,14 @@ namespace Stellogistics
 
         private Button _filterModeBtn;
         private Text _filterModeBtnText;
+        private Button _finderModeBtn;
+        private Text _finderModeBtnText;
         private Button _sortModeBtn;
         private Text _sortModeBtnText;
         private Button _optionsBtn;
         private Text _optionsBtnText;
+        private Button _generalOptionsBtn;
+        private Text _generalOptionsBtnText;
 
         private RectTransform _scrollViewportRect;
         private RectTransform _scrollContentRect;
@@ -238,19 +275,46 @@ namespace Stellogistics
         private Text _optionsTargetLabel;
         private Text _excludeRowLabelText;
         private Text _excludeThresholdBtnText;
+        private GeneralToggleRow _ignoreTargetToggleRow;
         private readonly List<FilterToggleRow> _filterToggles = new List<FilterToggleRow>();
+
+        private GameObject _generalOptionsMenuGo;
+        private RectTransform _generalOptionsMenuRect;
+        private readonly List<GeneralToggleRow> _generalOptionToggles = new List<GeneralToggleRow>();
 
         private GameObject _customPickerGo;
         private RectTransform _customPickerRect;
+        private GameObject _customPickerGridGo;
+        private GameObject _customPickerPlanetsScrollGo;
+        private RectTransform _customPickerPlanetsContentRect;
+        private GameObject _customPickerPlanetsEmptyGo;
+        private Text _customPickerTitleText;
         private Text _customPickerHoveredLabel;
         private Image _customTabItemsBg;
         private Image _customTabBuildingsBg;
+        private Image _customTabPlanetsBg;
+        private Text _customTabPlanetsText;
+        private Button _pickerCheckAllBtn;
+        private Button _pickerUncheckAllBtn;
+        private Button _pickerBottlenecksBtn;
+        private Text _pickerBottlenecksTxt;
+        private Button _pickerShowAllPlanetsBtn;
         private int _customPickerActiveTab = 1;
         private bool _customPickerOpen = false;
         private readonly List<CustomPickerCell> _customPickerCells = new List<CustomPickerCell>();
+        private readonly List<PlanetFilterRowView> _planetFilterRowPool = new List<PlanetFilterRowView>();
+        private readonly List<PlanetLogisticsFilterEntry> _planetFilterEntries = new List<PlanetLogisticsFilterEntry>();
         private readonly HashSet<int> _storedItemsSet = new HashSet<int>();
+        private readonly HashSet<int> _savedFinderHiddenSnapshot = new HashSet<int>();
+        private bool _hasSavedFinderSnapshot = false;
+        private bool _savedFinderOnlyBottlenecks = true;
+        private int _lastFinderCheckedCount = 0;
+        private bool _finderOnlyBottlenecks = true;
 
         private readonly List<ItemRowView> _rowPool = new List<ItemRowView>();
+
+        private UIStarmap _currentStarmap;
+        private bool _finderModeActive = false;
 
         private int _lastTargetAstroId = -1;
         private int _lastGalaxySeed = 0;
@@ -265,6 +329,7 @@ namespace Stellogistics
         private bool _exportsCollapsed = false;
         private bool _importsCollapsed = false;
         private bool _optionsMenuOpen = false;
+        private bool _generalOptionsMenuOpen = false;
         private bool _isResizing = false;
 
         private static readonly Color PanelBgColor = new Color(0.055f, 0.085f, 0.13f, 0.94f);
@@ -276,12 +341,17 @@ namespace Stellogistics
 
         private static readonly Color CriticalColor = new Color(1.0f, 0.34f, 0.34f, 1f);
         private static readonly Color CriticalFillColor = new Color(0.85f, 0.18f, 0.18f, 0.24f);
+        private static readonly Color CriticalTransitColor = new Color(1.0f, 0.42f, 0.42f, 0.38f);
         private static readonly Color WarningColor = new Color(1.0f, 0.70f, 0.24f, 1f);
         private static readonly Color WarningFillColor = new Color(0.85f, 0.52f, 0.12f, 0.22f);
+        private static readonly Color WarningTransitColor = new Color(1.0f, 0.72f, 0.28f, 0.36f);
         private static readonly Color HealthyColor = new Color(0.30f, 0.90f, 0.58f, 1f);
         private static readonly Color HealthyFillColor = new Color(0.18f, 0.68f, 0.42f, 0.18f);
+        private static readonly Color HealthyTransitColor = new Color(0.32f, 0.92f, 0.62f, 0.34f);
 
         private const float HeaderHeight = 74f;
+        private const float StackedHeaderHeight = 96f;
+        private const float StackedHeaderWidthThreshold = 385f;
         private const float CollapsedTabWidth = 148f;
         private const float CollapsedTabHeight = 32f;
         private const float SectionHeaderHeight = 26f;
@@ -310,7 +380,46 @@ namespace Stellogistics
 
             BuildUI();
             BuildOptionsMenu();
+            BuildGeneralOptionsMenu();
             BuildCustomItemPicker();
+        }
+
+        private Sprite GetOrCreateHatchedTransitSprite()
+        {
+            if (_hatchedTransitSprite != null)
+            {
+                return _hatchedTransitSprite;
+            }
+
+            const int size = 16;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear
+            };
+
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Diagonal 45-degree stripes (period 8px: 4px bright stripe, 4px soft gap)
+                    int diag = (x + y) & 7;
+                    float alpha = diag < 4 ? 1.0f : 0.22f;
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            tex.SetPixels(pixels);
+            tex.Apply();
+
+            _hatchedTransitSprite = Sprite.Create(
+                tex,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f
+            );
+            return _hatchedTransitSprite;
         }
 
         public bool IsPointerOverUI()
@@ -324,6 +433,10 @@ namespace Stellogistics
                 return true;
             }
             if (_optionsMenuOpen && _optionsHoverTracker != null && _optionsHoverTracker.IsHovered)
+            {
+                return true;
+            }
+            if (_generalOptionsMenuOpen && _generalOptionsHoverTracker != null && _generalOptionsHoverTracker.IsHovered)
             {
                 return true;
             }
@@ -403,18 +516,32 @@ namespace Stellogistics
             _titleText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _titleText.rectTransform.pivot = new Vector2(0f, 1f);
             _titleText.rectTransform.anchoredPosition = new Vector2(34f, -6f);
-            _titleText.rectTransform.sizeDelta = new Vector2(-190f, 20f);
+            _titleText.rectTransform.sizeDelta = new Vector2(-312f, 20f);
+            _titleText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _titleText.verticalOverflow = VerticalWrapMode.Truncate;
+            _titleText.resizeTextForBestFit = true;
+            _titleText.resizeTextMinSize = 10;
+            _titleText.resizeTextMaxSize = 13;
 
-            // Top-right Header Buttons: [Ext Only] [Sort: Alert] [Filter ▾]
-            _filterModeBtn = CreateHeaderButton("FilterModeBtn", _headerRect, new Vector2(-114f, -6f), new Vector2(52f, 20f), true, out _filterModeBtnText);
+            // Top-right Header Buttons with uniform 4px spacing:
+            // [-272..-222: Ext Only / Pick Item] [-218..-172: Finder / ← Back] [-168..-112: Sort] [-108..-62: Filter ▾] [-58..-6: Options ▾]
+            _filterModeBtn = CreateHeaderButton("FilterModeBtn", _headerRect, new Vector2(-222f, -6f), new Vector2(50f, 20f), true, out _filterModeBtnText);
             _filterModeBtn.onClick.AddListener(OnFilterModeButtonClicked);
 
-            _sortModeBtn = CreateHeaderButton("SortModeBtn", _headerRect, new Vector2(-58f, -6f), new Vector2(52f, 20f), true, out _sortModeBtnText);
+            _finderModeBtn = CreateHeaderButton("FinderModeBtn", _headerRect, new Vector2(-172f, -6f), new Vector2(46f, 20f), true, out _finderModeBtnText);
+            _finderModeBtnText.text = "Finder";
+            _finderModeBtn.onClick.AddListener(OnFinderModeButtonClicked);
+
+            _sortModeBtn = CreateHeaderButton("SortModeBtn", _headerRect, new Vector2(-112f, -6f), new Vector2(56f, 20f), true, out _sortModeBtnText);
             _sortModeBtn.onClick.AddListener(OnSortModeButtonClicked);
 
-            _optionsBtn = CreateHeaderButton("OptionsBtn", _headerRect, new Vector2(-6f, -6f), new Vector2(48f, 20f), true, out _optionsBtnText);
+            _optionsBtn = CreateHeaderButton("OptionsBtn", _headerRect, new Vector2(-62f, -6f), new Vector2(46f, 20f), true, out _optionsBtnText);
             _optionsBtnText.text = "Filter ▾";
             _optionsBtn.onClick.AddListener(OnOptionsButtonClicked);
+
+            _generalOptionsBtn = CreateHeaderButton("GeneralOptionsBtn", _headerRect, new Vector2(-6f, -6f), new Vector2(52f, 20f), true, out _generalOptionsBtnText);
+            _generalOptionsBtnText.text = "Options ▾";
+            _generalOptionsBtn.onClick.AddListener(OnGeneralOptionsButtonClicked);
 
             // Subtitle Text
             _subtitleText = CreateText("SubtitleText", _headerRect, 11, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.68f, 0.82f, 0.94f, 1f));
@@ -573,8 +700,8 @@ namespace Stellogistics
             Text gripIcon = CreateText("GripIcon", gripRect, 11, FontStyle.Bold, TextAnchor.LowerRight, new Color(0.55f, 0.82f, 1f, 0.85f));
             gripIcon.rectTransform.anchorMin = Vector2.zero;
             gripIcon.rectTransform.anchorMax = Vector2.one;
-            gripIcon.rectTransform.offsetMin = Vector2.zero;
-            gripIcon.rectTransform.offsetMax = new Vector2(-1f, 0f);
+            gripIcon.rectTransform.offsetMin = new Vector2(0f, -3f);
+            gripIcon.rectTransform.offsetMax = new Vector2(-1f, -3f);
             gripIcon.text = "◢";
 
             PanelResizeHandler resizeHandler = _resizeGripGo.GetComponent<PanelResizeHandler>();
@@ -585,7 +712,9 @@ namespace Stellogistics
             };
             resizeHandler.OnResizing = (newW, newTotalH) =>
             {
-                float desiredViewportH = newTotalH - HeaderHeight;
+                bool showFifthBtn = _finderModeActive || (_lastResolvedStar != null && _lastResolvedPlanet == null);
+                float activeHeaderH = ApplyHeaderLayout(newW, showFifthBtn);
+                float desiredViewportH = newTotalH - activeHeaderH;
 
                 // Stage 1: Dragged high up into the header -> collapse whole panel into Tabbed Mode
                 if (desiredViewportH <= 10f)
@@ -599,6 +728,12 @@ namespace Stellogistics
                             _optionsMenuOpen = false;
                             _optionsMenuGo.SetActive(false);
                             _optionsBtnText.text = "Filter ▾";
+                        }
+                        if (_generalOptionsMenuOpen && _generalOptionsMenuGo != null)
+                        {
+                            _generalOptionsMenuOpen = false;
+                            _generalOptionsMenuGo.SetActive(false);
+                            _generalOptionsBtnText.text = "Options ▾";
                         }
                         if (_customPickerOpen && _customPickerGo != null)
                         {
@@ -658,10 +793,66 @@ namespace Stellogistics
             resizeHandler.OnResizeFinished = (newW, newTotalH) =>
             {
                 _isResizing = false;
-                float savedMaxH = Mathf.Max(120f, _config.PanelMaxHeight.Value);
+                float savedMaxH = Mathf.Max(82f, _config.PanelMaxHeight.Value);
                 _config.SavePanelSize(_config.PanelWidth.Value, savedMaxH);
                 _forceRefresh = true;
             };
+        }
+
+        private float ApplyHeaderLayout(float panelWidth, bool showFifthButton)
+        {
+            bool stacked = panelWidth < StackedHeaderWidthThreshold;
+            float currentHeaderH = stacked ? StackedHeaderHeight : HeaderHeight;
+
+            _headerRect.sizeDelta = new Vector2(0f, currentHeaderH);
+            _scrollViewportRect.anchoredPosition = new Vector2(0f, -currentHeaderH);
+
+            _titleText.alignment = TextAnchor.MiddleLeft;
+            _titleText.rectTransform.anchoredPosition = new Vector2(34f, -6f);
+
+            RectTransform filterBtnRect = _filterModeBtn.GetComponent<RectTransform>();
+            RectTransform finderBtnRect = _finderModeBtn.GetComponent<RectTransform>();
+            RectTransform sortBtnRect = _sortModeBtn.GetComponent<RectTransform>();
+            RectTransform optBtnRect = _optionsBtn.GetComponent<RectTransform>();
+            RectTransform genOptBtnRect = _generalOptionsBtn.GetComponent<RectTransform>();
+
+            if (stacked)
+            {
+                // Row 1: [▼] + Title + Rightmost buttons ([Filter ▾] [Options ▾])
+                _titleText.rectTransform.sizeDelta = new Vector2(-146f, 20f);
+                optBtnRect.anchoredPosition = new Vector2(-62f, -6f);
+                genOptBtnRect.anchoredPosition = new Vector2(-6f, -6f);
+
+                // Row 2: Action buttons ([Netted / Pick Item] [Finder / ← Back] [Sort]) stacked neatly on the right at y = -28f
+                filterBtnRect.anchoredPosition = new Vector2(-116f, -28f);
+                finderBtnRect.anchoredPosition = new Vector2(-66f, -28f);
+                sortBtnRect.anchoredPosition = new Vector2(-6f, -28f);
+
+                _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -53f);
+                _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -72f);
+
+                if (_optionsMenuRect != null) _optionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+                if (_generalOptionsMenuRect != null) _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+            }
+            else
+            {
+                // Single top row: [▼] + Title on left, Buttons on right
+                _titleText.rectTransform.sizeDelta = new Vector2(showFifthButton ? -312f : -258f, 20f);
+
+                filterBtnRect.anchoredPosition = new Vector2(-222f, -6f);
+                finderBtnRect.anchoredPosition = new Vector2(-172f, -6f);
+                sortBtnRect.anchoredPosition = new Vector2(-112f, -6f);
+                optBtnRect.anchoredPosition = new Vector2(-62f, -6f);
+                genOptBtnRect.anchoredPosition = new Vector2(-6f, -6f);
+
+                _subtitleText.rectTransform.anchoredPosition = new Vector2(10f, -31f);
+                _fleetInfoText.rectTransform.anchoredPosition = new Vector2(10f, -50f);
+
+                if (_optionsMenuRect != null) _optionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+                if (_generalOptionsMenuRect != null) _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+            }
+
+            return currentHeaderH;
         }
 
         private void ApplyCurrentLayoutSizes(float panelWidth, float maxScrollHeight)
@@ -671,10 +862,13 @@ namespace Stellogistics
                 return;
             }
 
+            bool showFifthBtn = _finderModeActive || (_lastResolvedStar != null && _lastResolvedPlanet == null);
+            float activeHeaderH = ApplyHeaderLayout(panelWidth, showFifthBtn);
+
             bool bothMenusCollapsed = _exportsCollapsed && _importsCollapsed;
-            float viewportHeight = (_isResizing && !bothMenusCollapsed)
-                ? Mathf.Max(MinScrollHeight, maxScrollHeight)
-                : Mathf.Min(maxScrollHeight, _activeContentHeight);
+            float viewportHeight = bothMenusCollapsed
+                ? Mathf.Min(maxScrollHeight, _activeContentHeight)
+                : Mathf.Max(MinScrollHeight, maxScrollHeight);
             bool needsScrollbar = _activeContentHeight > viewportHeight + 0.5f;
             if (_scrollbarGo.activeSelf != needsScrollbar)
             {
@@ -684,7 +878,7 @@ namespace Stellogistics
             float rightInset = needsScrollbar ? -(ScrollbarWidth + 2f) : 0f;
             _scrollContentRect.sizeDelta = new Vector2(rightInset, _activeContentHeight);
             _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
-            _panelRect.sizeDelta = new Vector2(panelWidth, HeaderHeight + viewportHeight + 6f);
+            _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
 
             // Resize row fill bars to match the new panel width
             float rowAvailableWidth = panelWidth + rightInset;
@@ -693,11 +887,14 @@ namespace Stellogistics
                 ItemRowView row = _rowPool[i];
                 if (row.RootGo.activeSelf && row.FillBarRect != null)
                 {
-                    // Re-scale proportionally
-                    float prevRatio = row.RootRect.rect.width > 10f
-                        ? Mathf.Clamp01(row.FillBarRect.sizeDelta.x / row.RootRect.rect.width)
-                        : 0f;
-                    row.FillBarRect.sizeDelta = new Vector2(prevRatio * rowAvailableWidth, 0f);
+                    float fillW = row.FillRatioCached * rowAvailableWidth;
+                    row.FillBarRect.sizeDelta = new Vector2(fillW, 0f);
+                    if (row.TransitBarRect != null)
+                    {
+                        float transitW = row.TransitRatioCached * rowAvailableWidth;
+                        row.TransitBarRect.anchoredPosition = new Vector2(fillW, 0f);
+                        row.TransitBarRect.sizeDelta = new Vector2(transitW, 0f);
+                    }
                 }
             }
         }
@@ -711,7 +908,7 @@ namespace Stellogistics
             _optionsMenuRect.anchorMax = new Vector2(1f, 1f);
             _optionsMenuRect.pivot = new Vector2(1f, 1f);
             _optionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
-            _optionsMenuRect.sizeDelta = new Vector2(236f, 278f);
+            _optionsMenuRect.sizeDelta = new Vector2(236f, 304f);
 
             _optionsHoverTracker = _optionsMenuGo.GetComponent<PointerHoverTracker>();
 
@@ -729,7 +926,7 @@ namespace Stellogistics
             headerTitle.rectTransform.pivot = new Vector2(0f, 1f);
             headerTitle.rectTransform.anchoredPosition = new Vector2(10f, -8f);
             headerTitle.rectTransform.sizeDelta = new Vector2(-20f, 18f);
-            headerTitle.text = "OPTIONS — ITEM FILTER";
+            headerTitle.text = "ITEM FILTER";
 
             _optionsTargetLabel = CreateText("TargetScopeLabel", _optionsMenuRect, 10, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.60f, 0.78f, 0.92f, 1f));
             _optionsTargetLabel.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -794,7 +991,25 @@ namespace Stellogistics
             });
             y -= 26f;
 
-            Button resetFiltersBtn = CreateHeaderButton("BtnResetFilters", _optionsMenuRect, new Vector2(-150f, y - 6f), new Vector2(78f, 22f), true, out Text resetFiltersTxt);
+            _ignoreTargetToggleRow = CreateGeneralOptionToggleRow(
+                _optionsMenuRect,
+                "Ignore Target in Finder",
+                y,
+                () => _lastTargetAstroId > 0 && _config.IsAstroIgnored(_lastGalaxySeed, _lastTargetAstroId),
+                () =>
+                {
+                    if (_lastTargetAstroId > 0)
+                    {
+                        _config.ToggleAstroIgnored(_lastGalaxySeed, _lastTargetAstroId);
+                        RefreshOptionsMenuState();
+                        RefreshCustomPickerPlanetsList();
+                        _forceRefresh = true;
+                    }
+                }
+            );
+            y -= 26f;
+
+            Button resetFiltersBtn = CreateHeaderButton("BtnResetFilters", _optionsMenuRect, new Vector2(-120f, y - 6f), new Vector2(108f, 22f), true, out Text resetFiltersTxt);
             resetFiltersTxt.text = "Reset Filters";
             resetFiltersBtn.onClick.AddListener(() =>
             {
@@ -804,12 +1019,74 @@ namespace Stellogistics
                 _forceRefresh = true;
             });
 
-            Button customBtn = CreateHeaderButton("BtnCustom", _optionsMenuRect, new Vector2(-78f, y - 6f), new Vector2(66f, 22f), true, out Text customTxt);
-            customTxt.text = "Custom";
+            Button customBtn = CreateHeaderButton("BtnCustom", _optionsMenuRect, new Vector2(-6f, y - 6f), new Vector2(108f, 22f), true, out Text customTxt);
+            customTxt.text = "Custom Picker";
             customBtn.onClick.AddListener(ToggleCustomItemPicker);
 
-            Button resetPosBtn = CreateHeaderButton("BtnResetPos", _optionsMenuRect, new Vector2(-6f, y - 6f), new Vector2(66f, 22f), true, out Text resetPosTxt);
-            resetPosTxt.text = "Reset UI";
+            _optionsMenuGo.SetActive(false);
+        }
+
+        private void BuildGeneralOptionsMenu()
+        {
+            _generalOptionsMenuGo = new GameObject("GeneralOptionsMenu", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(PointerHoverTracker));
+            _generalOptionsMenuGo.transform.SetParent(_panelRect, false);
+            _generalOptionsMenuRect = _generalOptionsMenuGo.GetComponent<RectTransform>();
+            _generalOptionsMenuRect.anchorMin = new Vector2(1f, 1f);
+            _generalOptionsMenuRect.anchorMax = new Vector2(1f, 1f);
+            _generalOptionsMenuRect.pivot = new Vector2(1f, 1f);
+            _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
+            _generalOptionsMenuRect.sizeDelta = new Vector2(236f, 154f);
+
+            _generalOptionsHoverTracker = _generalOptionsMenuGo.GetComponent<PointerHoverTracker>();
+
+            Image menuBg = _generalOptionsMenuGo.GetComponent<Image>();
+            menuBg.color = new Color(0.06f, 0.10f, 0.16f, 0.98f);
+            menuBg.raycastTarget = true;
+
+            Outline outline = _generalOptionsMenuGo.GetComponent<Outline>();
+            outline.effectColor = new Color(0.32f, 0.68f, 0.95f, 0.65f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            Text headerTitle = CreateText("GeneralMenuTitle", _generalOptionsMenuRect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
+            headerTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
+            headerTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+            headerTitle.rectTransform.pivot = new Vector2(0f, 1f);
+            headerTitle.rectTransform.anchoredPosition = new Vector2(10f, -8f);
+            headerTitle.rectTransform.sizeDelta = new Vector2(-20f, 18f);
+            headerTitle.text = "OPTIONS — DISPLAY & UI";
+
+            _generalOptionToggles.Clear();
+            float y = -32f;
+
+            _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
+                _generalOptionsMenuRect,
+                "Show +In-Transit Bar (Hatched)",
+                y,
+                () => _config.ShowInTransitBar.Value,
+                () => _config.ShowInTransitBar.Value = !_config.ShowInTransitBar.Value
+            ));
+            y -= 26f;
+
+            _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
+                _generalOptionsMenuRect,
+                "Include Orbital Collectors (OC)",
+                y,
+                () => _config.IncludeOrbitalCollectors.Value,
+                () => _config.IncludeOrbitalCollectors.Value = !_config.IncludeOrbitalCollectors.Value
+            ));
+            y -= 26f;
+
+            _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
+                _generalOptionsMenuRect,
+                "Show Panel on Starmap Hover",
+                y,
+                () => _config.ShowOnHover.Value,
+                () => _config.ShowOnHover.Value = !_config.ShowOnHover.Value
+            ));
+            y -= 26f;
+
+            Button resetPosBtn = CreateHeaderButton("BtnResetPos", _generalOptionsMenuRect, new Vector2(-6f, y - 6f), new Vector2(224f, 22f), true, out Text resetPosTxt);
+            resetPosTxt.text = "Reset UI Position & Size";
             resetPosBtn.onClick.AddListener(() =>
             {
                 _config.ResetPanelLayout();
@@ -818,7 +1095,76 @@ namespace Stellogistics
                 _forceRefresh = true;
             });
 
-            _optionsMenuGo.SetActive(false);
+            _generalOptionsMenuGo.SetActive(false);
+        }
+
+        private GeneralToggleRow CreateGeneralOptionToggleRow(
+            RectTransform parent,
+            string label,
+            float posY,
+            Func<bool> getter,
+            Action toggler)
+        {
+            GameObject rowGo = new GameObject($"OptToggle_{label}", typeof(RectTransform), typeof(Image), typeof(Button));
+            rowGo.transform.SetParent(parent, false);
+            RectTransform rect = rowGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, posY);
+            rect.sizeDelta = new Vector2(-12f, 24f);
+
+            Image rowBg = rowGo.GetComponent<Image>();
+            rowBg.color = new Color(0.10f, 0.16f, 0.24f, 0.78f);
+
+            Button btn = rowGo.GetComponent<Button>();
+            ColorBlock cb = btn.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1.30f, 1.36f, 1.44f, 1f);
+            cb.pressedColor = new Color(0.80f, 0.85f, 0.92f, 1f);
+            btn.colors = cb;
+
+            GameObject boxGo = new GameObject("CheckBox", typeof(RectTransform), typeof(Image));
+            boxGo.transform.SetParent(rect, false);
+            RectTransform boxRect = boxGo.GetComponent<RectTransform>();
+            boxRect.anchorMin = new Vector2(0f, 0.5f);
+            boxRect.anchorMax = new Vector2(0f, 0.5f);
+            boxRect.pivot = new Vector2(0f, 0.5f);
+            boxRect.anchoredPosition = new Vector2(6f, 0f);
+            boxRect.sizeDelta = new Vector2(16f, 16f);
+            Image boxImg = boxGo.GetComponent<Image>();
+            boxImg.color = new Color(0.18f, 0.34f, 0.52f, 1f);
+            boxImg.raycastTarget = false;
+
+            Text checkTxt = CreateText("CheckMark", boxRect, 11, FontStyle.Bold, TextAnchor.MiddleCenter, HealthyColor);
+            checkTxt.rectTransform.anchorMin = Vector2.zero;
+            checkTxt.rectTransform.anchorMax = Vector2.one;
+            checkTxt.rectTransform.sizeDelta = Vector2.zero;
+            checkTxt.text = "✓";
+
+            Text lblTxt = CreateText("Label", rect, 11, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.90f, 0.95f, 1f, 1f));
+            lblTxt.rectTransform.anchorMin = new Vector2(0f, 0f);
+            lblTxt.rectTransform.anchorMax = new Vector2(1f, 1f);
+            lblTxt.rectTransform.offsetMin = new Vector2(28f, 0f);
+            lblTxt.rectTransform.offsetMax = new Vector2(-4f, 0f);
+            lblTxt.text = label;
+
+            btn.onClick.AddListener(() =>
+            {
+                toggler();
+                RefreshGeneralOptionsMenuState();
+                _forceRefresh = true;
+            });
+
+            return new GeneralToggleRow
+            {
+                Getter = getter,
+                Toggler = toggler,
+                Btn = btn,
+                CheckBoxBg = boxImg,
+                CheckMarkText = checkTxt,
+                LabelText = lblTxt
+            };
         }
 
         private void BuildCustomItemPicker()
@@ -872,12 +1218,12 @@ namespace Stellogistics
             PanelDragHandler pickerDrag = headerGo.GetComponent<PanelDragHandler>();
             pickerDrag.TargetRect = _customPickerRect;
 
-            Text titleTxt = CreateText("PickerTitle", headerRect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
-            titleTxt.rectTransform.anchorMin = new Vector2(0f, 0f);
-            titleTxt.rectTransform.anchorMax = new Vector2(1f, 1f);
-            titleTxt.rectTransform.offsetMin = new Vector2(10f, 0f);
-            titleTxt.rectTransform.offsetMax = new Vector2(-34f, 0f);
-            titleTxt.text = "CUSTOM ITEM & BUILDING FILTER (Click to toggle)";
+            _customPickerTitleText = CreateText("PickerTitle", headerRect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
+            _customPickerTitleText.rectTransform.anchorMin = new Vector2(0f, 0f);
+            _customPickerTitleText.rectTransform.anchorMax = new Vector2(1f, 1f);
+            _customPickerTitleText.rectTransform.offsetMin = new Vector2(10f, 0f);
+            _customPickerTitleText.rectTransform.offsetMax = new Vector2(-34f, 0f);
+            _customPickerTitleText.text = "ITEM, BUILDING & PLANET PICKER (Click to toggle)";
 
             Button closeBtn = CreateHeaderButton("BtnClosePicker", headerRect, new Vector2(-4f, -3f), new Vector2(22f, 22f), true, out Text closeTxt);
             closeTxt.text = "✕";
@@ -887,85 +1233,114 @@ namespace Stellogistics
                 _customPickerGo.SetActive(false);
             });
 
-            // Tabs row: Items (tab 1) and Buildings (tab 2)
-            Button tabItemsBtn = CreateHeaderButton("TabItems", _customPickerRect, new Vector2(10f, -34f), new Vector2(86f, 28f), false, out Text tabItemsTxt);
+            // Tabs row: Items (tab 1), Buildings (tab 2), and Planets (tab 3) — uniform 24px height at y = -36
+            Button tabItemsBtn = CreateHeaderButton("TabItems", _customPickerRect, new Vector2(10f, -36f), new Vector2(68f, 24f), false, out Text tabItemsTxt);
             tabItemsTxt.text = "Items";
             tabItemsTxt.fontSize = 11;
             _customTabItemsBg = tabItemsBtn.GetComponent<Image>();
             tabItemsBtn.onClick.AddListener(() => SetCustomPickerTab(1));
 
-            Button tabBldgsBtn = CreateHeaderButton("TabBuildings", _customPickerRect, new Vector2(102f, -34f), new Vector2(92f, 28f), false, out Text tabBldgsTxt);
+            Button tabBldgsBtn = CreateHeaderButton("TabBuildings", _customPickerRect, new Vector2(82f, -36f), new Vector2(76f, 24f), false, out Text tabBldgsTxt);
             tabBldgsTxt.text = "Buildings";
             tabBldgsTxt.fontSize = 11;
             _customTabBuildingsBg = tabBldgsBtn.GetComponent<Image>();
             tabBldgsBtn.onClick.AddListener(() => SetCustomPickerTab(2));
 
-            // Vertical separator between category tabs and bulk action buttons
+            Button tabPlanetsBtn = CreateHeaderButton("TabPlanets", _customPickerRect, new Vector2(162f, -36f), new Vector2(78f, 24f), false, out _customTabPlanetsText);
+            _customTabPlanetsText.text = "Planets";
+            _customTabPlanetsText.fontSize = 11;
+            _customTabPlanetsBg = tabPlanetsBtn.GetComponent<Image>();
+            tabPlanetsBtn.onClick.AddListener(() => SetCustomPickerTab(3));
+
+            // Vertical separator between category tabs and action buttons
             GameObject sepGo = new GameObject("ToolbarDivider", typeof(RectTransform), typeof(Image));
             sepGo.transform.SetParent(_customPickerRect, false);
             RectTransform sepRect = sepGo.GetComponent<RectTransform>();
             sepRect.anchorMin = new Vector2(0f, 1f);
             sepRect.anchorMax = new Vector2(0f, 1f);
             sepRect.pivot = new Vector2(0.5f, 1f);
-            sepRect.anchoredPosition = new Vector2(204f, -37f);
-            sepRect.sizeDelta = new Vector2(1f, 22f);
+            sepRect.anchoredPosition = new Vector2(248f, -36f);
+            sepRect.sizeDelta = new Vector2(1f, 24f);
             Image sepImg = sepGo.GetComponent<Image>();
             sepImg.color = new Color(0.32f, 0.56f, 0.78f, 0.55f);
             sepImg.raycastTarget = false;
 
-            // Visually distinct bulk action buttons (smaller height, outlined, green/rose color coding)
-            Button pickerCheckAllBtn = CreateHeaderButton("PickerCheckAll", _customPickerRect, new Vector2(215f, -37f), new Vector2(80f, 22f), false, out Text pickerCheckAllTxt);
+            // Visually distinct bulk action buttons (24px height, outlined, green/rose color coding)
+            _pickerCheckAllBtn = CreateHeaderButton("PickerCheckAll", _customPickerRect, new Vector2(254f, -36f), new Vector2(74f, 24f), false, out Text pickerCheckAllTxt);
             pickerCheckAllTxt.text = "✓ Check All";
-            pickerCheckAllTxt.color = new Color(0.84f, 1f, 0.92f, 1f);
-            Image checkAllBg = pickerCheckAllBtn.GetComponent<Image>();
-            checkAllBg.color = new Color(0.10f, 0.28f, 0.22f, 0.95f);
-            ColorBlock checkCb = pickerCheckAllBtn.colors;
-            checkCb.normalColor = new Color(0.10f, 0.28f, 0.22f, 0.95f);
-            checkCb.highlightedColor = new Color(0.16f, 0.42f, 0.34f, 1f);
-            checkCb.pressedColor = new Color(0.08f, 0.20f, 0.16f, 1f);
-            pickerCheckAllBtn.colors = checkCb;
-            Outline checkOutline = pickerCheckAllBtn.gameObject.AddComponent<Outline>();
-            checkOutline.effectColor = new Color(0.26f, 0.72f, 0.54f, 0.65f);
-            checkOutline.effectDistance = new Vector2(1f, -1f);
-            pickerCheckAllBtn.onClick.AddListener(() =>
+            pickerCheckAllTxt.color = new Color(0.86f, 1f, 0.92f, 1f);
+            Image checkAllBg = _pickerCheckAllBtn.GetComponent<Image>();
+            checkAllBg.color = new Color(0.11f, 0.30f, 0.23f, 0.96f);
+            Outline checkOutline = _pickerCheckAllBtn.GetComponent<Outline>();
+            if (checkOutline != null) checkOutline.effectColor = new Color(0.26f, 0.72f, 0.54f, 0.70f);
+            _pickerCheckAllBtn.onClick.AddListener(() =>
             {
+                _hasSavedFinderSnapshot = false;
                 _config.SetCustomItemsAllVisible(_lastGalaxySeed, _lastTargetAstroId, true);
                 RefreshCustomPickerCells();
                 RefreshOptionsMenuState();
                 _forceRefresh = true;
             });
 
-            Button pickerUncheckAllBtn = CreateHeaderButton("PickerUncheckAll", _customPickerRect, new Vector2(301f, -37f), new Vector2(90f, 22f), false, out Text pickerUncheckAllTxt);
+            _pickerUncheckAllBtn = CreateHeaderButton("PickerUncheckAll", _customPickerRect, new Vector2(332f, -36f), new Vector2(82f, 24f), false, out Text pickerUncheckAllTxt);
             pickerUncheckAllTxt.text = "✕ Uncheck All";
-            pickerUncheckAllTxt.color = new Color(1f, 0.86f, 0.88f, 1f);
-            Image uncheckAllBg = pickerUncheckAllBtn.GetComponent<Image>();
-            uncheckAllBg.color = new Color(0.28f, 0.13f, 0.17f, 0.95f);
-            ColorBlock uncheckCb = pickerUncheckAllBtn.colors;
-            uncheckCb.normalColor = new Color(0.28f, 0.13f, 0.17f, 0.95f);
-            uncheckCb.highlightedColor = new Color(0.42f, 0.19f, 0.24f, 1f);
-            uncheckCb.pressedColor = new Color(0.20f, 0.10f, 0.12f, 1f);
-            pickerUncheckAllBtn.colors = uncheckCb;
-            Outline uncheckOutline = pickerUncheckAllBtn.gameObject.AddComponent<Outline>();
-            uncheckOutline.effectColor = new Color(0.76f, 0.34f, 0.40f, 0.65f);
-            uncheckOutline.effectDistance = new Vector2(1f, -1f);
-            pickerUncheckAllBtn.onClick.AddListener(() =>
+            pickerUncheckAllTxt.color = new Color(1f, 0.88f, 0.90f, 1f);
+            Image uncheckAllBg = _pickerUncheckAllBtn.GetComponent<Image>();
+            uncheckAllBg.color = new Color(0.30f, 0.14f, 0.18f, 0.96f);
+            Outline uncheckOutline = _pickerUncheckAllBtn.GetComponent<Outline>();
+            if (uncheckOutline != null) uncheckOutline.effectColor = new Color(0.78f, 0.34f, 0.40f, 0.70f);
+            _pickerUncheckAllBtn.onClick.AddListener(() =>
             {
+                _hasSavedFinderSnapshot = false;
                 _config.SetCustomItemsAllVisible(_lastGalaxySeed, _lastTargetAstroId, false);
                 RefreshCustomPickerCells();
                 RefreshOptionsMenuState();
                 _forceRefresh = true;
             });
 
+            // Finder mode toggle button: Filter to only Bottlenecks (≤40%) or show all fill levels
+            _pickerBottlenecksBtn = CreateHeaderButton("PickerBottlenecks", _customPickerRect, new Vector2(418f, -36f), new Vector2(78f, 24f), false, out _pickerBottlenecksTxt);
+            _pickerBottlenecksTxt.text = "! ≤40% Only";
+            _pickerBottlenecksBtn.onClick.AddListener(() =>
+            {
+                _finderOnlyBottlenecks = !_finderOnlyBottlenecks;
+                RefreshBottlenecksToggleVisual();
+                _forceRefresh = true;
+            });
+
+            // Planets tab button: Show all planets / clear all ignored planets & systems
+            _pickerShowAllPlanetsBtn = CreateHeaderButton("PickerShowAllPlanets", _customPickerRect, new Vector2(256f, -36f), new Vector2(124f, 24f), false, out Text pickerShowAllPlanetsTxt);
+            pickerShowAllPlanetsTxt.text = "✓ Show All Planets";
+            pickerShowAllPlanetsTxt.color = new Color(0.86f, 1f, 0.92f, 1f);
+            Image showAllPlanetsBg = _pickerShowAllPlanetsBtn.GetComponent<Image>();
+            showAllPlanetsBg.color = new Color(0.11f, 0.30f, 0.23f, 0.96f);
+            Outline showAllPlanetsOutline = _pickerShowAllPlanetsBtn.GetComponent<Outline>();
+            if (showAllPlanetsOutline != null) showAllPlanetsOutline.effectColor = new Color(0.26f, 0.72f, 0.54f, 0.70f);
+            _pickerShowAllPlanetsBtn.onClick.AddListener(() =>
+            {
+                _config.ClearAllIgnoredAstros(_lastGalaxySeed);
+                RefreshCustomPickerPlanetsList();
+                RefreshOptionsMenuState();
+                _forceRefresh = true;
+            });
+            _pickerShowAllPlanetsBtn.gameObject.SetActive(false);
+
             _customPickerHoveredLabel = CreateText("HoveredItemLabel", _customPickerRect, 11, FontStyle.Bold, TextAnchor.MiddleRight, new Color(0.80f, 0.92f, 1f, 1f));
             _customPickerHoveredLabel.rectTransform.anchorMin = new Vector2(0f, 1f);
             _customPickerHoveredLabel.rectTransform.anchorMax = new Vector2(1f, 1f);
             _customPickerHoveredLabel.rectTransform.pivot = new Vector2(1f, 1f);
-            _customPickerHoveredLabel.rectTransform.anchoredPosition = new Vector2(-12f, -34f);
-            _customPickerHoveredLabel.rectTransform.sizeDelta = new Vector2(-406f, 28f);
+            _customPickerHoveredLabel.rectTransform.anchoredPosition = new Vector2(-12f, -36f);
+            _customPickerHoveredLabel.rectTransform.sizeDelta = new Vector2(-440f, 24f);
+            _customPickerHoveredLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _customPickerHoveredLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            _customPickerHoveredLabel.resizeTextForBestFit = true;
+            _customPickerHoveredLabel.resizeTextMinSize = 9;
+            _customPickerHoveredLabel.resizeTextMaxSize = 11;
             _customPickerHoveredLabel.text = "Bright = Shown • Dimmed = Hidden";
 
             // Grid container
             GameObject gridGo = new GameObject("GridContainer", typeof(RectTransform), typeof(Image));
+            _customPickerGridGo = gridGo;
             gridGo.transform.SetParent(_customPickerRect, false);
             RectTransform gridRect = gridGo.GetComponent<RectTransform>();
             gridRect.anchorMin = new Vector2(0f, 1f);
@@ -1049,7 +1424,16 @@ namespace Stellogistics
                     iconImg.preserveAspect = true;
                     iconImg.raycastTarget = false;
 
+                    Outline cellOutline = cellGo.AddComponent<Outline>();
+                    cellOutline.effectColor = new Color(0.28f, 0.50f, 0.74f, 0.40f);
+                    cellOutline.effectDistance = new Vector2(1f, -1f);
+
                     Button btn = cellGo.GetComponent<Button>();
+                    ColorBlock cellCb = btn.colors;
+                    cellCb.normalColor = Color.white;
+                    cellCb.highlightedColor = new Color(1.32f, 1.38f, 1.48f, 1f);
+                    cellCb.pressedColor = new Color(0.80f, 0.86f, 0.94f, 1f);
+                    btn.colors = cellCb;
                     btn.onClick.AddListener(() => OnCustomPickerItemClicked(itemId, itemName, itemCategory));
 
                     ItemCellHoverHandler hover = cellGo.GetComponent<ItemCellHoverHandler>();
@@ -1086,7 +1470,283 @@ namespace Stellogistics
                 }
             }
 
+            BuildCustomPickerPlanetsTab(padX, -topHeight, gridWidth, gridHeight);
+
             _customPickerGo.SetActive(false);
+        }
+
+        private void BuildCustomPickerPlanetsTab(float posX, float posY, float width, float height)
+        {
+            _customPickerPlanetsScrollGo = new GameObject("PlanetsContainer", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(Mask));
+            _customPickerPlanetsScrollGo.transform.SetParent(_customPickerRect, false);
+            RectTransform scrollRectTransform = _customPickerPlanetsScrollGo.GetComponent<RectTransform>();
+            scrollRectTransform.anchorMin = new Vector2(0f, 1f);
+            scrollRectTransform.anchorMax = new Vector2(0f, 1f);
+            scrollRectTransform.pivot = new Vector2(0f, 1f);
+            scrollRectTransform.anchoredPosition = new Vector2(posX, posY);
+            scrollRectTransform.sizeDelta = new Vector2(width, height);
+
+            Image bgImg = _customPickerPlanetsScrollGo.GetComponent<Image>();
+            bgImg.color = new Color(0.04f, 0.06f, 0.09f, 0.92f);
+            bgImg.raycastTarget = true;
+            Mask mask = _customPickerPlanetsScrollGo.GetComponent<Mask>();
+            mask.showMaskGraphic = true;
+
+            GameObject contentGo = new GameObject("PlanetsContent", typeof(RectTransform));
+            contentGo.transform.SetParent(scrollRectTransform, false);
+            _customPickerPlanetsContentRect = contentGo.GetComponent<RectTransform>();
+            _customPickerPlanetsContentRect.anchorMin = new Vector2(0f, 1f);
+            _customPickerPlanetsContentRect.anchorMax = new Vector2(1f, 1f);
+            _customPickerPlanetsContentRect.pivot = new Vector2(0f, 1f);
+            _customPickerPlanetsContentRect.anchoredPosition = Vector2.zero;
+            _customPickerPlanetsContentRect.sizeDelta = new Vector2(0f, height);
+
+            ScrollRect sr = _customPickerPlanetsScrollGo.GetComponent<ScrollRect>();
+            sr.viewport = scrollRectTransform;
+            sr.content = _customPickerPlanetsContentRect;
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 28f;
+
+            _customPickerPlanetsEmptyGo = new GameObject("PlanetsEmpty", typeof(RectTransform));
+            _customPickerPlanetsEmptyGo.transform.SetParent(_customPickerPlanetsContentRect, false);
+            RectTransform emptyRect = _customPickerPlanetsEmptyGo.GetComponent<RectTransform>();
+            emptyRect.anchorMin = new Vector2(0f, 1f);
+            emptyRect.anchorMax = new Vector2(1f, 1f);
+            emptyRect.pivot = new Vector2(0.5f, 1f);
+            emptyRect.anchoredPosition = new Vector2(0f, -20f);
+            emptyRect.sizeDelta = new Vector2(-20f, 40f);
+            Text emptyTxt = CreateText("EmptyText", emptyRect, 12, FontStyle.Italic, TextAnchor.MiddleCenter, new Color(0.60f, 0.72f, 0.82f, 0.95f));
+            emptyTxt.rectTransform.anchorMin = Vector2.zero;
+            emptyTxt.rectTransform.anchorMax = Vector2.one;
+            emptyTxt.rectTransform.sizeDelta = Vector2.zero;
+            emptyTxt.text = "No planets with Interplanetary Logistics Stations found.";
+            _customPickerPlanetsEmptyGo.SetActive(false);
+
+            _customPickerPlanetsScrollGo.SetActive(false);
+        }
+
+        private PlanetFilterRowView GetOrCreatePlanetFilterRow(int index)
+        {
+            while (_planetFilterRowPool.Count <= index)
+            {
+                int idx = _planetFilterRowPool.Count;
+                GameObject rowGo = new GameObject($"PlanetFilterRow_{idx}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
+                rowGo.transform.SetParent(_customPickerPlanetsContentRect, false);
+                RectTransform rect = rowGo.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0f, 1f);
+                rect.sizeDelta = new Vector2(272f, 26f);
+
+                Image rowBg = rowGo.GetComponent<Image>();
+                rowBg.color = new Color(0.10f, 0.16f, 0.24f, 0.85f);
+
+                Outline outline = rowGo.GetComponent<Outline>();
+                outline.effectColor = new Color(0.26f, 0.48f, 0.72f, 0.35f);
+                outline.effectDistance = new Vector2(1f, -1f);
+
+                Button btn = rowGo.GetComponent<Button>();
+                ColorBlock cb = btn.colors;
+                cb.normalColor = Color.white;
+                cb.highlightedColor = new Color(1.28f, 1.34f, 1.42f, 1f);
+                cb.pressedColor = new Color(0.80f, 0.85f, 0.92f, 1f);
+                btn.colors = cb;
+
+                GameObject boxGo = new GameObject("CheckBox", typeof(RectTransform), typeof(Image));
+                boxGo.transform.SetParent(rect, false);
+                RectTransform boxRect = boxGo.GetComponent<RectTransform>();
+                boxRect.anchorMin = new Vector2(0f, 0.5f);
+                boxRect.anchorMax = new Vector2(0f, 0.5f);
+                boxRect.pivot = new Vector2(0f, 0.5f);
+                boxRect.anchoredPosition = new Vector2(6f, 0f);
+                boxRect.sizeDelta = new Vector2(16f, 16f);
+                Image boxImg = boxGo.GetComponent<Image>();
+                boxImg.color = new Color(0.18f, 0.34f, 0.52f, 1f);
+                boxImg.raycastTarget = false;
+
+                Text checkTxt = CreateText("CheckMark", boxRect, 11, FontStyle.Bold, TextAnchor.MiddleCenter, HealthyColor);
+                checkTxt.rectTransform.anchorMin = Vector2.zero;
+                checkTxt.rectTransform.anchorMax = Vector2.one;
+                checkTxt.rectTransform.sizeDelta = Vector2.zero;
+                checkTxt.text = "✓";
+
+                Text nameTxt = CreateText("Name", rect, 11, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
+                nameTxt.rectTransform.anchorMin = new Vector2(0f, 0f);
+                nameTxt.rectTransform.anchorMax = new Vector2(0.62f, 1f);
+                nameTxt.rectTransform.offsetMin = new Vector2(28f, 0f);
+                nameTxt.rectTransform.offsetMax = new Vector2(-2f, 0f);
+
+                Text metaTxt = CreateText("Meta", rect, 10, FontStyle.Normal, TextAnchor.MiddleRight, new Color(0.64f, 0.80f, 0.92f, 0.95f));
+                metaTxt.rectTransform.anchorMin = new Vector2(0.58f, 0f);
+                metaTxt.rectTransform.anchorMax = new Vector2(1f, 1f);
+                metaTxt.rectTransform.offsetMin = new Vector2(0f, 0f);
+                metaTxt.rectTransform.offsetMax = new Vector2(-6f, 0f);
+
+                var view = new PlanetFilterRowView
+                {
+                    RootGo = rowGo,
+                    RootRect = rect,
+                    BgImage = rowBg,
+                    Btn = btn,
+                    CheckBoxBg = boxImg,
+                    CheckMarkText = checkTxt,
+                    NameText = nameTxt,
+                    MetaText = metaTxt
+                };
+                btn.onClick.AddListener(() => view.OnClick?.Invoke());
+                _planetFilterRowPool.Add(view);
+            }
+
+            PlanetFilterRowView row = _planetFilterRowPool[index];
+            if (!row.RootGo.activeSelf)
+            {
+                row.RootGo.SetActive(true);
+            }
+            return row;
+        }
+
+        private void RefreshCustomPickerPlanetsList()
+        {
+            if (_customPickerGo == null)
+            {
+                return;
+            }
+
+            int ignoredCount = _config.GetIgnoredAstroCount(_lastGalaxySeed);
+            if (_customTabPlanetsText != null)
+            {
+                _customTabPlanetsText.text = ignoredCount > 0 ? $"Planets (-{ignoredCount})" : "Planets";
+            }
+
+            if (!_customPickerOpen || _customPickerActiveTab != 3 || _customPickerPlanetsContentRect == null)
+            {
+                return;
+            }
+
+            LogisticsAggregator.CollectLogisticsPlanetsAndStars(_config, _planetFilterEntries);
+            if (_planetFilterEntries.Count == 0)
+            {
+                _customPickerPlanetsEmptyGo.SetActive(true);
+                for (int i = 0; i < _planetFilterRowPool.Count; i++)
+                {
+                    _planetFilterRowPool[i].RootGo.SetActive(false);
+                }
+                _customPickerPlanetsContentRect.sizeDelta = new Vector2(0f, 120f);
+                return;
+            }
+
+            _customPickerPlanetsEmptyGo.SetActive(false);
+
+            const float colWidth = 272f;
+            const float colGap = 6f;
+            const float rowH = 26f;
+            const float rowGap = 3f;
+            const float padLeft = 4f;
+            const float padTop = 4f;
+
+            for (int i = 0; i < _planetFilterEntries.Count; i++)
+            {
+                PlanetLogisticsFilterEntry entry = _planetFilterEntries[i];
+                PlanetFilterRowView row = GetOrCreatePlanetFilterRow(i);
+
+                int col = i % 2;
+                int r = i / 2;
+                row.RootRect.anchoredPosition = new Vector2(padLeft + col * (colWidth + colGap), -(padTop + r * (rowH + rowGap)));
+
+                bool isSelfIgnored = _config.IsAstroIgnored(_lastGalaxySeed, entry.AstroId);
+                bool isParentStarIgnored = !entry.IsStarSystem && _config.IsAstroIgnored(_lastGalaxySeed, entry.ParentStarAstroId);
+                bool effectivelyIgnored = isSelfIgnored || isParentStarIgnored;
+
+                if (entry.IsStarSystem)
+                {
+                    row.BgImage.color = effectivelyIgnored
+                        ? new Color(0.20f, 0.10f, 0.12f, 0.78f)
+                        : new Color(0.14f, 0.24f, 0.36f, 0.95f);
+                }
+                else
+                {
+                    row.BgImage.color = effectivelyIgnored
+                        ? new Color(0.15f, 0.08f, 0.10f, 0.68f)
+                        : new Color(0.09f, 0.15f, 0.23f, 0.88f);
+                }
+
+                row.CheckMarkText.text = effectivelyIgnored ? "✕" : "✓";
+                row.CheckMarkText.color = effectivelyIgnored ? CriticalColor : HealthyColor;
+                row.CheckBoxBg.color = effectivelyIgnored
+                    ? new Color(0.32f, 0.14f, 0.16f, 1f)
+                    : new Color(0.18f, 0.42f, 0.62f, 1f);
+
+                string dispName = entry.IsStarSystem ? entry.DisplayName : $"  ▸ {entry.DisplayName}";
+                if (dispName.Length > 22)
+                {
+                    dispName = dispName.Substring(0, 20) + "..";
+                }
+                row.NameText.text = dispName;
+                row.NameText.fontStyle = entry.IsStarSystem ? FontStyle.Bold : FontStyle.Normal;
+                row.NameText.color = effectivelyIgnored
+                    ? new Color(0.65f, 0.55f, 0.58f, 0.85f)
+                    : (entry.IsStarSystem ? new Color(0.96f, 0.98f, 1f, 1f) : new Color(0.88f, 0.94f, 1f, 1f));
+
+                row.MetaText.text = effectivelyIgnored ? "Ignored" : entry.MetaInfo;
+                row.MetaText.color = effectivelyIgnored
+                    ? CriticalColor
+                    : new Color(0.62f, 0.78f, 0.92f, 0.95f);
+
+                int capturedAstroId = entry.AstroId;
+                int capturedParentStarAstroId = entry.ParentStarAstroId;
+                bool capturedIsStar = entry.IsStarSystem;
+                row.OnClick = () =>
+                {
+                    if (!capturedIsStar && _config.IsAstroIgnored(_lastGalaxySeed, capturedParentStarAstroId))
+                    {
+                        // If parent star system was ignored and user clicks a planet inside it, un-ignore the star system
+                        _config.SetAstroIgnored(_lastGalaxySeed, capturedParentStarAstroId, false);
+                    }
+                    else
+                    {
+                        _config.ToggleAstroIgnored(_lastGalaxySeed, capturedAstroId);
+                    }
+                    RefreshCustomPickerPlanetsList();
+                    RefreshOptionsMenuState();
+                    _forceRefresh = true;
+                };
+            }
+
+            for (int i = _planetFilterEntries.Count; i < _planetFilterRowPool.Count; i++)
+            {
+                if (_planetFilterRowPool[i].RootGo.activeSelf)
+                {
+                    _planetFilterRowPool[i].RootGo.SetActive(false);
+                }
+            }
+
+            int totalRows = (_planetFilterEntries.Count + 1) / 2;
+            float contentH = Mathf.Max(318f, padTop * 2f + totalRows * (rowH + rowGap));
+            _customPickerPlanetsContentRect.sizeDelta = new Vector2(0f, contentH);
+        }
+
+        private void RefreshBottlenecksToggleVisual()
+        {
+            if (_pickerBottlenecksBtn == null)
+            {
+                return;
+            }
+            Image bg = _pickerBottlenecksBtn.GetComponent<Image>();
+            Outline ol = _pickerBottlenecksBtn.GetComponent<Outline>();
+            if (_finderOnlyBottlenecks)
+            {
+                bg.color = new Color(0.38f, 0.22f, 0.08f, 0.98f);
+                if (ol != null) ol.effectColor = new Color(0.95f, 0.60f, 0.22f, 0.85f);
+                if (_pickerBottlenecksTxt != null) _pickerBottlenecksTxt.color = new Color(1f, 0.94f, 0.80f, 1f);
+            }
+            else
+            {
+                bg.color = new Color(0.14f, 0.22f, 0.32f, 0.92f);
+                if (ol != null) ol.effectColor = new Color(0.30f, 0.50f, 0.72f, 0.45f);
+                if (_pickerBottlenecksTxt != null) _pickerBottlenecksTxt.color = new Color(0.75f, 0.86f, 0.96f, 0.90f);
+            }
         }
 
         private void ToggleCustomItemPicker()
@@ -1095,14 +1755,21 @@ namespace Stellogistics
             {
                 return;
             }
-            _customPickerOpen = !_customPickerOpen;
-            _customPickerGo.SetActive(_customPickerOpen);
+
             if (_customPickerOpen)
             {
-                PositionCustomPickerBesidePanel();
-                _customPickerRect.SetAsLastSibling();
-                SetCustomPickerTab(_customPickerActiveTab);
+                _customPickerOpen = false;
+                _customPickerGo.SetActive(false);
+                return;
             }
+
+            _customPickerOpen = true;
+            _customPickerGo.SetActive(true);
+
+            RefreshBottlenecksToggleVisual();
+            PositionCustomPickerBesidePanel();
+            _customPickerRect.SetAsLastSibling();
+            SetCustomPickerTab(_customPickerActiveTab);
         }
 
         private void PositionCustomPickerBesidePanel()
@@ -1154,13 +1821,47 @@ namespace Stellogistics
                     ? new Color(0.24f, 0.44f, 0.66f, 1f)
                     : new Color(0.12f, 0.18f, 0.28f, 0.85f);
             }
-            RefreshCustomPickerCells();
+            if (_customTabPlanetsBg != null)
+            {
+                _customTabPlanetsBg.color = (tab == 3)
+                    ? new Color(0.24f, 0.44f, 0.66f, 1f)
+                    : new Color(0.12f, 0.18f, 0.28f, 0.85f);
+            }
+
+            bool isPlanetsTab = (tab == 3);
+            if (_customPickerGridGo != null) _customPickerGridGo.SetActive(!isPlanetsTab);
+            if (_customPickerPlanetsScrollGo != null) _customPickerPlanetsScrollGo.SetActive(isPlanetsTab);
+
+            if (_pickerCheckAllBtn != null) _pickerCheckAllBtn.gameObject.SetActive(!isPlanetsTab);
+            if (_pickerUncheckAllBtn != null) _pickerUncheckAllBtn.gameObject.SetActive(!isPlanetsTab);
+            if (_pickerBottlenecksBtn != null) _pickerBottlenecksBtn.gameObject.SetActive(!isPlanetsTab && _finderModeActive);
+            if (_pickerShowAllPlanetsBtn != null) _pickerShowAllPlanetsBtn.gameObject.SetActive(isPlanetsTab);
+            RefreshBottlenecksToggleVisual();
+
+            if (_customPickerHoveredLabel != null)
+            {
+                _customPickerHoveredLabel.rectTransform.sizeDelta = (!isPlanetsTab && _finderModeActive)
+                    ? new Vector2(-504f, 24f)
+                    : new Vector2(-430f, 24f);
+                _customPickerHoveredLabel.text = isPlanetsTab
+                    ? "Toggle Star / Planet in Finder"
+                    : "Bright = Shown • Dimmed = Hidden";
+                _customPickerHoveredLabel.color = new Color(0.80f, 0.92f, 1f, 1f);
+            }
+
+            RefreshCustomPickerPlanetsList();
+            if (!isPlanetsTab)
+            {
+                RefreshCustomPickerCells();
+            }
         }
 
         private void OnCustomPickerItemClicked(int itemId, string itemName, EItemCategoryFilter itemCategory)
         {
+            _hasSavedFinderSnapshot = false;
             _config.ToggleItemOverrideForAstro(_lastGalaxySeed, _lastTargetAstroId, itemId);
             bool nowVisible = _config.IsItemVisibleForAstro(_lastGalaxySeed, _lastTargetAstroId, itemId, itemCategory);
+
             if (_customPickerHoveredLabel != null)
             {
                 _customPickerHoveredLabel.text = nowVisible ? $"{itemName} (Shown)" : $"{itemName} (Hidden)";
@@ -1215,13 +1916,13 @@ namespace Stellogistics
             rect.sizeDelta = new Vector2(-12f, 24f);
 
             Image rowBg = rowGo.GetComponent<Image>();
-            rowBg.color = new Color(0.10f, 0.16f, 0.24f, 0.65f);
+            rowBg.color = new Color(0.10f, 0.16f, 0.24f, 0.78f);
 
             Button btn = rowGo.GetComponent<Button>();
             ColorBlock cb = btn.colors;
-            cb.normalColor = new Color(0.10f, 0.16f, 0.24f, 0.65f);
-            cb.highlightedColor = new Color(0.18f, 0.28f, 0.42f, 0.95f);
-            cb.pressedColor = new Color(0.08f, 0.13f, 0.20f, 1f);
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1.30f, 1.36f, 1.44f, 1f);
+            cb.pressedColor = new Color(0.80f, 0.85f, 0.92f, 1f);
             btn.colors = cb;
 
             GameObject boxGo = new GameObject("CheckBox", typeof(RectTransform), typeof(Image));
@@ -1269,7 +1970,7 @@ namespace Stellogistics
             bool anchorRight,
             out Text btnText)
         {
-            GameObject btnGo = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject btnGo = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
             btnGo.transform.SetParent(parent, false);
             RectTransform rect = btnGo.GetComponent<RectTransform>();
             float ax = anchorRight ? 1f : 0f;
@@ -1280,16 +1981,20 @@ namespace Stellogistics
             rect.sizeDelta = size;
 
             Image bg = btnGo.GetComponent<Image>();
-            bg.color = new Color(0.16f, 0.28f, 0.42f, 0.95f);
+            bg.color = new Color(0.15f, 0.26f, 0.39f, 0.96f);
+
+            Outline outline = btnGo.GetComponent<Outline>();
+            outline.effectColor = new Color(0.30f, 0.54f, 0.78f, 0.45f);
+            outline.effectDistance = new Vector2(1f, -1f);
 
             Button btn = btnGo.GetComponent<Button>();
             ColorBlock cb = btn.colors;
-            cb.normalColor = new Color(0.16f, 0.28f, 0.42f, 0.95f);
-            cb.highlightedColor = new Color(0.24f, 0.42f, 0.62f, 1f);
-            cb.pressedColor = new Color(0.12f, 0.20f, 0.30f, 1f);
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1.30f, 1.35f, 1.42f, 1f);
+            cb.pressedColor = new Color(0.80f, 0.85f, 0.92f, 1f);
             btn.colors = cb;
 
-            btnText = CreateText("Text", rect, 10, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(0.88f, 0.96f, 1f, 1f));
+            btnText = CreateText("Text", rect, 10, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(0.90f, 0.97f, 1f, 1f));
             btnText.rectTransform.anchorMin = Vector2.zero;
             btnText.rectTransform.anchorMax = Vector2.one;
             btnText.rectTransform.sizeDelta = Vector2.zero;
@@ -1319,9 +2024,9 @@ namespace Stellogistics
 
             Button btn = headerGo.GetComponent<Button>();
             ColorBlock cb = btn.colors;
-            cb.normalColor = SectionHeaderBgColor;
-            cb.highlightedColor = SectionHeaderHoverColor;
-            cb.pressedColor = new Color(0.09f, 0.14f, 0.22f, 1f);
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1.25f, 1.30f, 1.38f, 1f);
+            cb.pressedColor = new Color(0.82f, 0.87f, 0.94f, 1f);
             btn.colors = cb;
             btn.onClick.AddListener(onClickAction);
 
@@ -1354,7 +2059,7 @@ namespace Stellogistics
 
         private ItemRowView CreateRowWidget(int index)
         {
-            GameObject rowGo = new GameObject($"ItemRow_{index}", typeof(RectTransform), typeof(Image));
+            GameObject rowGo = new GameObject($"ItemRow_{index}", typeof(RectTransform), typeof(Image), typeof(Button));
             rowGo.transform.SetParent(_scrollContentRect, false);
             RectTransform rowRect = rowGo.GetComponent<RectTransform>();
             rowRect.anchorMin = new Vector2(0f, 1f);
@@ -1363,7 +2068,16 @@ namespace Stellogistics
             rowRect.sizeDelta = new Vector2(0f, RowHeight);
 
             Image bgImg = rowGo.GetComponent<Image>();
-            bgImg.color = (index % 2 == 0) ? RowEvenBgColor : RowOddBgColor;
+            Color baseBg = (index % 2 == 0) ? RowEvenBgColor : RowOddBgColor;
+            bgImg.color = baseBg;
+
+            Button rowBtn = rowGo.GetComponent<Button>();
+            ColorBlock rowCb = rowBtn.colors;
+            rowCb.normalColor = Color.white;
+            rowCb.highlightedColor = new Color(1.22f, 1.28f, 1.38f, 1f);
+            rowCb.pressedColor = new Color(0.85f, 0.90f, 0.98f, 1f);
+            rowBtn.colors = rowCb;
+            rowBtn.targetGraphic = bgImg;
 
             GameObject fillGo = new GameObject("FillBar", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(rowRect, false);
@@ -1376,6 +2090,21 @@ namespace Stellogistics
             Image fillImg = fillGo.GetComponent<Image>();
             fillImg.color = HealthyFillColor;
             fillImg.raycastTarget = false;
+
+            GameObject transitGo = new GameObject("TransitBar", typeof(RectTransform), typeof(Image));
+            transitGo.transform.SetParent(rowRect, false);
+            RectTransform transitRect = transitGo.GetComponent<RectTransform>();
+            transitRect.anchorMin = new Vector2(0f, 0f);
+            transitRect.anchorMax = new Vector2(0f, 1f);
+            transitRect.pivot = new Vector2(0f, 0.5f);
+            transitRect.anchoredPosition = Vector2.zero;
+            transitRect.sizeDelta = new Vector2(0f, 0f);
+            Image transitImg = transitGo.GetComponent<Image>();
+            transitImg.sprite = GetOrCreateHatchedTransitSprite();
+            transitImg.type = Image.Type.Tiled;
+            transitImg.color = HealthyTransitColor;
+            transitImg.raycastTarget = false;
+            transitGo.SetActive(false);
 
             GameObject stripeGo = new GameObject("StatusStripe", typeof(RectTransform), typeof(Image));
             stripeGo.transform.SetParent(rowRect, false);
@@ -1425,13 +2154,48 @@ namespace Stellogistics
             subStatusText.rectTransform.offsetMin = new Vector2(0f, 1f);
             subStatusText.rectTransform.offsetMax = new Vector2(-10f, 0f);
 
-            return new ItemRowView
+            // Inline [✕] button on Finder rows to quickly ignore/mute an abandoned planet right from the list
+            GameObject muteBtnGo = new GameObject("MutePlanetBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
+            muteBtnGo.transform.SetParent(rowRect, false);
+            RectTransform muteRect = muteBtnGo.GetComponent<RectTransform>();
+            muteRect.anchorMin = new Vector2(1f, 0.5f);
+            muteRect.anchorMax = new Vector2(1f, 0.5f);
+            muteRect.pivot = new Vector2(1f, 0.5f);
+            muteRect.anchoredPosition = new Vector2(-4f, 0f);
+            muteRect.sizeDelta = new Vector2(18f, 18f);
+
+            Image muteBg = muteBtnGo.GetComponent<Image>();
+            muteBg.color = new Color(0.28f, 0.14f, 0.17f, 0.90f);
+
+            Outline muteOutline = muteBtnGo.GetComponent<Outline>();
+            muteOutline.effectColor = new Color(0.75f, 0.34f, 0.40f, 0.55f);
+            muteOutline.effectDistance = new Vector2(1f, -1f);
+
+            Button muteBtn = muteBtnGo.GetComponent<Button>();
+            ColorBlock muteCb = muteBtn.colors;
+            muteCb.normalColor = Color.white;
+            muteCb.highlightedColor = new Color(1.40f, 1.25f, 1.25f, 1f);
+            muteCb.pressedColor = new Color(0.80f, 0.70f, 0.70f, 1f);
+            muteBtn.colors = muteCb;
+
+            Text muteTxt = CreateText("Text", muteRect, 10, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.85f, 0.95f));
+            muteTxt.rectTransform.anchorMin = Vector2.zero;
+            muteTxt.rectTransform.anchorMax = Vector2.one;
+            muteTxt.rectTransform.sizeDelta = Vector2.zero;
+            muteTxt.text = "✕";
+            muteBtnGo.SetActive(false);
+
+            var view = new ItemRowView
             {
                 RootGo = rowGo,
                 RootRect = rowRect,
                 BgImage = bgImg,
+                RowButton = rowBtn,
+                MuteBtnGo = muteBtnGo,
                 FillBarRect = fillRect,
                 FillBarImage = fillImg,
+                TransitBarRect = transitRect,
+                TransitBarImage = transitImg,
                 StatusStripeImage = stripeImg,
                 IconImage = iconImg,
                 NameText = nameText,
@@ -1439,6 +2203,9 @@ namespace Stellogistics
                 AmountText = amountText,
                 SubStatusText = subStatusText
             };
+            rowBtn.onClick.AddListener(() => view.OnRowClick?.Invoke());
+            muteBtn.onClick.AddListener(() => view.OnMuteClick?.Invoke());
+            return view;
         }
 
         private Text CreateText(string name, RectTransform parent, int fontSize, FontStyle style, TextAnchor align, Color color)
@@ -1469,6 +2236,12 @@ namespace Stellogistics
                     _optionsMenuGo.SetActive(false);
                     _optionsBtnText.text = "Filter ▾";
                 }
+                if (_generalOptionsMenuOpen && _generalOptionsMenuGo != null)
+                {
+                    _generalOptionsMenuOpen = false;
+                    _generalOptionsMenuGo.SetActive(false);
+                    _generalOptionsBtnText.text = "Options ▾";
+                }
                 if (_customPickerOpen && _customPickerGo != null)
                 {
                     _customPickerOpen = false;
@@ -1492,8 +2265,94 @@ namespace Stellogistics
 
         private void OnFilterModeButtonClicked()
         {
+            if (_finderModeActive)
+            {
+                ToggleCustomItemPicker();
+                return;
+            }
             int next = ((int)_config.StarSystemFilterMode.Value + 1) % 3;
             _config.StarSystemFilterMode.Value = (EStarFilterMode)next;
+            _forceRefresh = true;
+        }
+
+        private void ReturnToFinderOverview()
+        {
+            if (_hasSavedFinderSnapshot)
+            {
+                _hasSavedFinderSnapshot = false;
+                _config.RestoreHiddenItemsSnapshot(_lastGalaxySeed, _lastTargetAstroId, _savedFinderHiddenSnapshot);
+                _finderOnlyBottlenecks = _savedFinderOnlyBottlenecks;
+            }
+            else
+            {
+                _config.SetCustomItemsAllVisible(_lastGalaxySeed, _lastTargetAstroId, true);
+            }
+
+            _finderModeActive = true;
+            if (_customPickerOpen)
+            {
+                SetCustomPickerTab(_customPickerActiveTab);
+            }
+            RefreshOptionsMenuState();
+            if (_scrollRect != null)
+            {
+                _scrollRect.verticalNormalizedPosition = 1f;
+            }
+            _forceRefresh = true;
+        }
+
+        private void OnFinderModeButtonClicked()
+        {
+            if (_finderModeActive)
+            {
+                if (_hasSavedFinderSnapshot || _lastFinderCheckedCount == 1)
+                {
+                    ReturnToFinderOverview();
+                    return;
+                }
+
+                // Exit Finder mode back to normal Planet/Star inspection
+                _finderModeActive = false;
+                if (_customPickerOpen)
+                {
+                    SetCustomPickerTab(_customPickerActiveTab);
+                }
+                if (_scrollRect != null)
+                {
+                    _scrollRect.verticalNormalizedPosition = 1f;
+                }
+                _forceRefresh = true;
+                return;
+            }
+
+            if (_panelCollapsed)
+            {
+                _panelCollapsed = false;
+                _panelCollapseBtnText.text = "▼";
+            }
+            if (_optionsMenuOpen)
+            {
+                _optionsMenuOpen = false;
+                _optionsMenuGo.SetActive(false);
+                _optionsBtnText.text = "Filter ▾";
+            }
+            if (_generalOptionsMenuOpen)
+            {
+                _generalOptionsMenuOpen = false;
+                _generalOptionsMenuGo.SetActive(false);
+                _generalOptionsBtnText.text = "Options ▾";
+            }
+
+            // Activate Finder view and open the unified Picker if not already open
+            _finderModeActive = true;
+            if (!_customPickerOpen)
+            {
+                ToggleCustomItemPicker();
+            }
+            else
+            {
+                SetCustomPickerTab(_customPickerActiveTab);
+            }
             _forceRefresh = true;
         }
 
@@ -1507,6 +2366,12 @@ namespace Stellogistics
         private void OnOptionsButtonClicked()
         {
             _optionsMenuOpen = !_optionsMenuOpen;
+            if (_optionsMenuOpen && _generalOptionsMenuOpen)
+            {
+                _generalOptionsMenuOpen = false;
+                _generalOptionsMenuGo.SetActive(false);
+                _generalOptionsBtnText.text = "Options ▾";
+            }
             if (_optionsMenuOpen && _panelCollapsed)
             {
                 _panelCollapsed = false;
@@ -1518,6 +2383,50 @@ namespace Stellogistics
             {
                 _optionsMenuRect.SetAsLastSibling();
                 RefreshOptionsMenuState();
+            }
+        }
+
+        private void OnGeneralOptionsButtonClicked()
+        {
+            _generalOptionsMenuOpen = !_generalOptionsMenuOpen;
+            if (_generalOptionsMenuOpen && _optionsMenuOpen)
+            {
+                _optionsMenuOpen = false;
+                _optionsMenuGo.SetActive(false);
+                _optionsBtnText.text = "Filter ▾";
+            }
+            if (_generalOptionsMenuOpen && _panelCollapsed)
+            {
+                _panelCollapsed = false;
+                _panelCollapseBtnText.text = "▼";
+            }
+            _generalOptionsMenuGo.SetActive(_generalOptionsMenuOpen);
+            _generalOptionsBtnText.text = _generalOptionsMenuOpen ? "Options ▴" : "Options ▾";
+            if (_generalOptionsMenuOpen)
+            {
+                _generalOptionsMenuRect.SetAsLastSibling();
+                RefreshGeneralOptionsMenuState();
+            }
+        }
+
+        private void RefreshGeneralOptionsMenuState()
+        {
+            if (!_generalOptionsMenuOpen)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _generalOptionToggles.Count; i++)
+            {
+                GeneralToggleRow row = _generalOptionToggles[i];
+                bool enabled = row.Getter();
+                row.CheckMarkText.text = enabled ? "✓" : "";
+                row.CheckBoxBg.color = enabled
+                    ? new Color(0.18f, 0.42f, 0.62f, 1f)
+                    : new Color(0.12f, 0.16f, 0.22f, 1f);
+                row.LabelText.color = enabled
+                    ? new Color(0.92f, 0.96f, 1f, 1f)
+                    : new Color(0.50f, 0.58f, 0.68f, 0.85f);
             }
         }
 
@@ -1592,6 +2501,22 @@ namespace Stellogistics
                     ? new Color(0.92f, 0.96f, 1f, 1f)
                     : new Color(0.50f, 0.58f, 0.68f, 0.85f);
             }
+
+            if (_ignoreTargetToggleRow != null)
+            {
+                bool ignored = _ignoreTargetToggleRow.Getter();
+                int totalIgnored = _config.GetIgnoredAstroCount(_lastGalaxySeed);
+                string targetKind = (_lastResolvedStar != null && _lastResolvedPlanet == null) ? "Star System" : "Planet";
+                string countSuffix = totalIgnored > 0 ? $" ({totalIgnored} ignored)" : "";
+                _ignoreTargetToggleRow.LabelText.text = $"Ignore {targetKind} in Finder{countSuffix}";
+                _ignoreTargetToggleRow.CheckMarkText.text = ignored ? "✓" : "";
+                _ignoreTargetToggleRow.CheckBoxBg.color = ignored
+                    ? new Color(0.18f, 0.42f, 0.62f, 1f)
+                    : new Color(0.12f, 0.16f, 0.22f, 1f);
+                _ignoreTargetToggleRow.LabelText.color = ignored
+                    ? WarningColor
+                    : new Color(0.92f, 0.96f, 1f, 1f);
+            }
         }
 
         public void RequestImmediateRefresh()
@@ -1601,6 +2526,7 @@ namespace Stellogistics
 
         public void OnStarmapUpdate(UIStarmap starmap)
         {
+            _currentStarmap = starmap;
             if (_config == null || !_config.EnableMod.Value || starmap == null || !starmap.active)
             {
                 if (gameObject.activeSelf)
@@ -1612,7 +2538,7 @@ namespace Stellogistics
 
             ResolveTarget(starmap, out PlanetData targetPlanet, out StarData targetStar);
 
-            if (targetPlanet == null && targetStar == null)
+            if (!_finderModeActive && targetPlanet == null && targetStar == null)
             {
                 if (gameObject.activeSelf)
                 {
@@ -1624,8 +2550,11 @@ namespace Stellogistics
                 return;
             }
 
-            _lastResolvedPlanet = targetPlanet;
-            _lastResolvedStar = targetStar;
+            if (targetPlanet != null || targetStar != null)
+            {
+                _lastResolvedPlanet = targetPlanet;
+                _lastResolvedStar = targetStar;
+            }
 
             if (!gameObject.activeSelf)
             {
@@ -1639,24 +2568,27 @@ namespace Stellogistics
                 VFInput.inScrollView = true;
             }
 
-            int currentAstroId = targetPlanet != null ? targetPlanet.astroId : targetStar.astroId;
-            if (currentAstroId != _lastTargetAstroId)
+            if (!_finderModeActive && (targetPlanet != null || targetStar != null))
             {
-                _lastTargetAstroId = currentAstroId;
-                _lastGalaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
-                _lastTargetDisplayName = targetPlanet != null ? targetPlanet.displayName : $"{targetStar.displayName} System";
-                _forceRefresh = true;
-                if (_scrollRect != null)
+                int currentAstroId = targetPlanet != null ? targetPlanet.astroId : targetStar.astroId;
+                if (currentAstroId != _lastTargetAstroId)
                 {
-                    _scrollRect.verticalNormalizedPosition = 1f;
-                }
-                if (_optionsMenuOpen)
-                {
-                    RefreshOptionsMenuState();
-                }
-                if (_customPickerOpen)
-                {
-                    RefreshCustomPickerCells();
+                    _lastTargetAstroId = currentAstroId;
+                    _lastGalaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
+                    _lastTargetDisplayName = targetPlanet != null ? targetPlanet.displayName : $"{targetStar.displayName} System";
+                    _forceRefresh = true;
+                    if (_scrollRect != null)
+                    {
+                        _scrollRect.verticalNormalizedPosition = 1f;
+                    }
+                    if (_optionsMenuOpen)
+                    {
+                        RefreshOptionsMenuState();
+                    }
+                    if (_customPickerOpen)
+                    {
+                        RefreshCustomPickerCells();
+                    }
                 }
             }
 
@@ -1666,11 +2598,19 @@ namespace Stellogistics
                 _forceRefresh = false;
                 _nextRefreshTime = now + 0.25f;
 
-                LogisticsSummary summary = targetPlanet != null
-                    ? LogisticsAggregator.AggregatePlanet(targetPlanet, _config)
-                    : LogisticsAggregator.AggregateStar(targetStar, _config);
+                if (_finderModeActive)
+                {
+                    GalaxyItemSearchSummary searchSummary = LogisticsAggregator.ScanGalaxyFinder(_config, _finderOnlyBottlenecks);
+                    RenderGalaxySearchSummary(searchSummary);
+                }
+                else
+                {
+                    LogisticsSummary summary = targetPlanet != null
+                        ? LogisticsAggregator.AggregatePlanet(targetPlanet, _config)
+                        : LogisticsAggregator.AggregateStar(targetStar, _config);
 
-                RenderSummary(summary);
+                    RenderSummary(summary);
+                }
             }
         }
 
@@ -1758,8 +2698,10 @@ namespace Stellogistics
                 _subtitleText.gameObject.SetActive(false);
                 _fleetInfoText.gameObject.SetActive(false);
                 _filterModeBtn.gameObject.SetActive(false);
+                _finderModeBtn.gameObject.SetActive(false);
                 _sortModeBtn.gameObject.SetActive(false);
                 _optionsBtn.gameObject.SetActive(false);
+                _generalOptionsBtn.gameObject.SetActive(false);
                 _scrollRect.gameObject.SetActive(false);
                 _resizeGripGo.SetActive(_isResizing);
 
@@ -1768,19 +2710,21 @@ namespace Stellogistics
                 return;
             }
 
-            // Expanded State
-            _headerRect.sizeDelta = new Vector2(0f, HeaderHeight);
-            _titleText.alignment = TextAnchor.MiddleLeft;
-            _titleText.rectTransform.anchoredPosition = new Vector2(34f, -6f);
-            _titleText.rectTransform.sizeDelta = new Vector2(-190f, 20f);
-            _subtitleText.gameObject.SetActive(true);
-            _fleetInfoText.gameObject.SetActive(true);
-            _sortModeBtn.gameObject.SetActive(true);
-            _optionsBtn.gameObject.SetActive(true);
-            _resizeGripGo.SetActive(true);
-
             float panelWidth = _config.PanelWidth.Value;
             float maxScrollHeight = _config.PanelMaxHeight.Value;
+
+            // Expanded State
+            float activeHeaderH = ApplyHeaderLayout(panelWidth, summary.IsStarSystem);
+            _subtitleText.gameObject.SetActive(true);
+            _fleetInfoText.gameObject.SetActive(true);
+            _finderModeBtn.gameObject.SetActive(true);
+            _finderModeBtnText.text = "Finder";
+            _finderModeBtn.GetComponent<Image>().color = new Color(0.15f, 0.26f, 0.39f, 0.96f);
+            _filterModeBtn.GetComponent<Image>().color = new Color(0.15f, 0.26f, 0.39f, 0.96f);
+            _sortModeBtn.gameObject.SetActive(true);
+            _optionsBtn.gameObject.SetActive(true);
+            _generalOptionsBtn.gameObject.SetActive(true);
+            _resizeGripGo.SetActive(true);
 
             _titleText.text = summary.TargetName;
             _subtitleText.text = summary.TargetSubtitle;
@@ -1831,10 +2775,12 @@ namespace Stellogistics
                 }
 
                 _activeContentHeight = MinScrollHeight;
+                float emptyViewportHeight = Mathf.Max(MinScrollHeight, maxScrollHeight);
                 _scrollbarGo.SetActive(false);
                 _scrollContentRect.sizeDelta = new Vector2(0f, _activeContentHeight);
-                _scrollViewportRect.sizeDelta = new Vector2(0f, _activeContentHeight);
-                _panelRect.sizeDelta = new Vector2(panelWidth, HeaderHeight + _activeContentHeight + 8f);
+                _scrollViewportRect.sizeDelta = new Vector2(0f, emptyViewportHeight);
+                _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + emptyViewportHeight);
+                _resizeGripGo.transform.SetAsLastSibling();
                 return;
             }
 
@@ -1859,11 +2805,11 @@ namespace Stellogistics
                     estimatedHeight += summary.Imports.Count * (RowHeight + RowSpacing);
                 }
             }
-            _activeContentHeight = Mathf.Max(MinScrollHeight, estimatedHeight + 4f);
+            _activeContentHeight = Mathf.Max(MinScrollHeight, Mathf.Max(0f, estimatedHeight - RowSpacing));
             bool bothMenusCollapsed = _exportsCollapsed && _importsCollapsed;
-            float viewportHeight = (_isResizing && !bothMenusCollapsed)
-                ? Mathf.Max(MinScrollHeight, maxScrollHeight)
-                : Mathf.Min(maxScrollHeight, _activeContentHeight);
+            float viewportHeight = bothMenusCollapsed
+                ? Mathf.Min(maxScrollHeight, _activeContentHeight)
+                : Mathf.Max(MinScrollHeight, maxScrollHeight);
             bool needsScrollbar = _activeContentHeight > viewportHeight + 0.5f;
             float rightInset = needsScrollbar ? -(ScrollbarWidth + 2f) : 0f;
             float rowAvailableWidth = panelWidth + rightInset;
@@ -1934,7 +2880,7 @@ namespace Stellogistics
             _scrollbarGo.SetActive(needsScrollbar);
             _scrollContentRect.sizeDelta = new Vector2(rightInset, _activeContentHeight);
             _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
-            _panelRect.sizeDelta = new Vector2(panelWidth, HeaderHeight + viewportHeight + 6f);
+            _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
             _resizeGripGo.transform.SetAsLastSibling();
         }
 
@@ -1967,26 +2913,49 @@ namespace Stellogistics
 
             Color accentColor;
             Color fillColor;
+            Color transitColor;
             switch (status)
             {
                 case EHealthStatus.Critical:
                     accentColor = CriticalColor;
                     fillColor = CriticalFillColor;
+                    transitColor = CriticalTransitColor;
                     break;
                 case EHealthStatus.Warning:
                     accentColor = WarningColor;
                     fillColor = WarningFillColor;
+                    transitColor = WarningTransitColor;
                     break;
                 default:
                     accentColor = HealthyColor;
                     fillColor = HealthyFillColor;
+                    transitColor = HealthyTransitColor;
                     break;
             }
 
             row.StatusStripeImage.color = accentColor;
             row.FillBarImage.color = fillColor;
-            float fillWidth = Mathf.Clamp01(item.FillRatio) * rowWidth;
+            float fillRatio = Mathf.Clamp01(item.FillRatio);
+            float fillWidth = fillRatio * rowWidth;
+            row.FillRatioCached = fillRatio;
             row.FillBarRect.sizeDelta = new Vector2(fillWidth, 0f);
+
+            float transitRatio = _config.ShowInTransitBar.Value ? item.InboundTransitRatio : 0f;
+            row.TransitRatioCached = transitRatio;
+            if (transitRatio > 0.001f)
+            {
+                if (!row.TransitBarRect.gameObject.activeSelf)
+                {
+                    row.TransitBarRect.gameObject.SetActive(true);
+                }
+                row.TransitBarImage.color = transitColor;
+                row.TransitBarRect.anchoredPosition = new Vector2(fillWidth, 0f);
+                row.TransitBarRect.sizeDelta = new Vector2(transitRatio * rowWidth, 0f);
+            }
+            else if (row.TransitBarRect.gameObject.activeSelf)
+            {
+                row.TransitBarRect.gameObject.SetActive(false);
+            }
 
             row.IconImage.sprite = item.Icon;
             row.IconImage.enabled = item.Icon != null;
@@ -2051,6 +3020,475 @@ namespace Stellogistics
             row.SubStatusText.color = status == EHealthStatus.Healthy
                 ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
                 : accentColor;
+
+            int capturedItemId = item.ItemId;
+            if (row.MuteBtnGo != null && row.MuteBtnGo.activeSelf)
+            {
+                row.MuteBtnGo.SetActive(false);
+            }
+            row.AmountText.rectTransform.offsetMax = new Vector2(-10f, -1f);
+            row.SubStatusText.rectTransform.offsetMax = new Vector2(-10f, 0f);
+            row.OnMuteClick = null;
+            row.OnRowClick = () =>
+            {
+                if (capturedItemId > 0)
+                {
+                    if (!_hasSavedFinderSnapshot)
+                    {
+                        _config.CopyHiddenItemsSnapshot(_lastGalaxySeed, _lastTargetAstroId, _savedFinderHiddenSnapshot);
+                        _savedFinderOnlyBottlenecks = _finderOnlyBottlenecks;
+                        _hasSavedFinderSnapshot = true;
+                    }
+                    _finderModeActive = true;
+                    _config.SetCustomSingleItemOnly(_lastGalaxySeed, _lastTargetAstroId, capturedItemId);
+                    _finderOnlyBottlenecks = false;
+                    if (_customPickerOpen)
+                    {
+                        SetCustomPickerTab(_customPickerActiveTab);
+                    }
+                    RefreshOptionsMenuState();
+                    if (_scrollRect != null)
+                    {
+                        _scrollRect.verticalNormalizedPosition = 1f;
+                    }
+                    _forceRefresh = true;
+                }
+            };
+        }
+
+        private void RenderGalaxySearchSummary(GalaxyItemSearchSummary summary)
+        {
+            if (_panelCollapsed)
+            {
+                _titleText.text = "Stellogistics";
+                _titleText.alignment = TextAnchor.MiddleCenter;
+                _titleText.rectTransform.anchoredPosition = new Vector2(30f, -6f);
+                _titleText.rectTransform.sizeDelta = new Vector2(-36f, 20f);
+                _subtitleText.gameObject.SetActive(false);
+                _fleetInfoText.gameObject.SetActive(false);
+                _filterModeBtn.gameObject.SetActive(false);
+                _finderModeBtn.gameObject.SetActive(false);
+                _sortModeBtn.gameObject.SetActive(false);
+                _optionsBtn.gameObject.SetActive(false);
+                _generalOptionsBtn.gameObject.SetActive(false);
+                _scrollRect.gameObject.SetActive(false);
+                _resizeGripGo.SetActive(_isResizing);
+
+                _headerRect.sizeDelta = new Vector2(0f, CollapsedTabHeight);
+                _panelRect.sizeDelta = new Vector2(CollapsedTabWidth, CollapsedTabHeight);
+                return;
+            }
+
+            float panelWidth = _config.PanelWidth.Value;
+            float maxScrollHeight = _config.PanelMaxHeight.Value;
+
+            float activeHeaderH = ApplyHeaderLayout(panelWidth, true);
+            _subtitleText.gameObject.SetActive(true);
+            _fleetInfoText.gameObject.SetActive(true);
+
+            // In Finder mode, FilterModeBtn becomes "Pick Item" so you can easily pick another item or scan bottlenecks
+            _filterModeBtn.gameObject.SetActive(true);
+            _filterModeBtnText.text = "Pick Item";
+            _filterModeBtn.GetComponent<Image>().color = _customPickerOpen
+                ? new Color(0.24f, 0.46f, 0.70f, 0.98f)
+                : new Color(0.15f, 0.26f, 0.39f, 0.96f);
+
+            _finderModeBtn.gameObject.SetActive(true);
+            _lastFinderCheckedCount = summary.CheckedItemCount;
+            bool isSingleItemFocused = summary.CheckedItemCount == 1;
+            if (isSingleItemFocused)
+            {
+                _finderModeBtnText.text = "← All";
+                _finderModeBtn.GetComponent<Image>().color = new Color(0.26f, 0.50f, 0.74f, 0.98f);
+            }
+            else
+            {
+                _hasSavedFinderSnapshot = false;
+                _finderModeBtnText.text = "← Back";
+                _finderModeBtn.GetComponent<Image>().color = new Color(0.22f, 0.40f, 0.62f, 0.98f);
+            }
+
+            _sortModeBtn.gameObject.SetActive(true);
+            _optionsBtn.gameObject.SetActive(true);
+            _generalOptionsBtn.gameObject.SetActive(true);
+            _resizeGripGo.SetActive(true);
+
+            int totalIgnoredAstros = _config.GetIgnoredAstroCount(_lastGalaxySeed);
+            string ignoredSuffix = summary.IgnoredPlanetMatchCount > 0
+                ? $" • {summary.IgnoredPlanetMatchCount} Ignored"
+                : (totalIgnoredAstros > 0 ? $" • {totalIgnoredAstros} Filtered" : "");
+
+            _titleText.text = $"Finder: {summary.ItemName}";
+            _subtitleText.text = (_finderOnlyBottlenecks && summary.CheckedItemCount != 1)
+                ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}"
+                : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}";
+            _fleetInfoText.text = "Click row to focus & pin • [✕] to ignore planet";
+
+            _sortModeBtnText.text = _config.SortOrder.Value switch
+            {
+                ESortOrder.ShortageFirst => "Sort: Alert",
+                ESortOrder.ItemId => "Sort: ID",
+                _ => "Sort: Pct ↓"
+            };
+
+            if (!_scrollRect.gameObject.activeSelf)
+            {
+                _scrollRect.gameObject.SetActive(true);
+            }
+
+            if (!summary.HasAnyLocations)
+            {
+                _exportsHeaderGo.SetActive(false);
+                _importsHeaderGo.SetActive(false);
+                HideRowsFrom(0);
+
+                _emptyStateGo.SetActive(true);
+                if (summary.CheckedItemCount == 0)
+                {
+                    _emptyStateText.text = "No items checked — click any item(s) in the Picker to locate.";
+                }
+                else if (summary.IgnoredPlanetMatchCount > 0)
+                {
+                    _emptyStateText.text = $"{summary.IgnoredPlanetMatchCount} matching planet(s) hidden by Planet Filter (Pick Item → Planets).";
+                }
+                else
+                {
+                    _emptyStateText.text = _finderOnlyBottlenecks
+                        ? "All checked remote slots are Healthy (>40%)!"
+                        : $"No planet exports or imports {summary.ItemName}.";
+                }
+
+                _activeContentHeight = MinScrollHeight;
+                float emptyViewportHeight = Mathf.Max(MinScrollHeight, maxScrollHeight);
+                _scrollbarGo.SetActive(false);
+                _scrollContentRect.sizeDelta = new Vector2(0f, _activeContentHeight);
+                _scrollViewportRect.sizeDelta = new Vector2(0f, emptyViewportHeight);
+                _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + emptyViewportHeight);
+                _resizeGripGo.transform.SetAsLastSibling();
+                return;
+            }
+
+            _emptyStateGo.SetActive(false);
+
+            float estimatedHeight = 0f;
+            if (summary.ExportingPlanets.Count > 0)
+            {
+                estimatedHeight += SectionHeaderHeight + RowSpacing;
+                if (!_exportsCollapsed)
+                {
+                    estimatedHeight += summary.ExportingPlanets.Count * (RowHeight + RowSpacing);
+                }
+            }
+            if (summary.ImportingPlanets.Count > 0)
+            {
+                if (estimatedHeight > 0f) estimatedHeight += 4f;
+                estimatedHeight += SectionHeaderHeight + RowSpacing;
+                if (!_importsCollapsed)
+                {
+                    estimatedHeight += summary.ImportingPlanets.Count * (RowHeight + RowSpacing);
+                }
+            }
+            _activeContentHeight = Mathf.Max(MinScrollHeight, Mathf.Max(0f, estimatedHeight - RowSpacing));
+            bool bothMenusCollapsed = _exportsCollapsed && _importsCollapsed;
+            float viewportHeight = bothMenusCollapsed
+                ? Mathf.Min(maxScrollHeight, _activeContentHeight)
+                : Mathf.Max(MinScrollHeight, maxScrollHeight);
+            bool needsScrollbar = _activeContentHeight > viewportHeight + 0.5f;
+            float rightInset = needsScrollbar ? -(ScrollbarWidth + 2f) : 0f;
+            float rowAvailableWidth = panelWidth + rightInset;
+
+            float cursorY = 0f;
+            int rowIndex = 0;
+            int critPct = _config.CriticalThresholdPercent.Value;
+            int warnPct = _config.WarningThresholdPercent.Value;
+
+            if (summary.ExportingPlanets.Count > 0)
+            {
+                _exportsHeaderGo.SetActive(true);
+                _exportsHeaderRect.anchoredPosition = new Vector2(0f, -cursorY);
+                string expArrow = _exportsCollapsed ? "▶" : "▼";
+                _exportsHeaderText.text = $"{expArrow} EXPORTING PLANETS ({summary.ExportingPlanets.Count})";
+                _exportsAlertText.text = FormatAlertSummary(summary.CriticalExportPlanetCount, summary.WarningExportPlanetCount, "EMPTY", "LOW");
+                _exportsAlertText.color = summary.CriticalExportPlanetCount > 0 ? CriticalColor : WarningColor;
+                cursorY += SectionHeaderHeight + RowSpacing;
+
+                if (!_exportsCollapsed)
+                {
+                    for (int i = 0; i < summary.ExportingPlanets.Count; i++)
+                    {
+                        ItemRowView row = GetOrCreateRow(rowIndex++);
+                        row.RootRect.anchoredPosition = new Vector2(0f, -cursorY);
+                        BindPlanetLocationRow(row, summary.ExportingPlanets[i], summary.IsBottleneckScan, rowAvailableWidth, critPct, warnPct);
+                        cursorY += RowHeight + RowSpacing;
+                    }
+                }
+            }
+            else
+            {
+                _exportsHeaderGo.SetActive(false);
+            }
+
+            if (summary.ImportingPlanets.Count > 0)
+            {
+                if (cursorY > 0f)
+                {
+                    cursorY += 4f;
+                }
+                _importsHeaderGo.SetActive(true);
+                _importsHeaderRect.anchoredPosition = new Vector2(0f, -cursorY);
+                string impArrow = _importsCollapsed ? "▶" : "▼";
+                _importsHeaderText.text = $"{impArrow} IMPORTING PLANETS ({summary.ImportingPlanets.Count})";
+                _importsAlertText.text = FormatAlertSummary(summary.CriticalImportPlanetCount, summary.WarningImportPlanetCount, "STARVED", "LOW");
+                _importsAlertText.color = summary.CriticalImportPlanetCount > 0 ? CriticalColor : WarningColor;
+                cursorY += SectionHeaderHeight + RowSpacing;
+
+                if (!_importsCollapsed)
+                {
+                    for (int i = 0; i < summary.ImportingPlanets.Count; i++)
+                    {
+                        ItemRowView row = GetOrCreateRow(rowIndex++);
+                        row.RootRect.anchoredPosition = new Vector2(0f, -cursorY);
+                        BindPlanetLocationRow(row, summary.ImportingPlanets[i], summary.IsBottleneckScan, rowAvailableWidth, critPct, warnPct);
+                        cursorY += RowHeight + RowSpacing;
+                    }
+                }
+            }
+            else
+            {
+                _importsHeaderGo.SetActive(false);
+            }
+
+            HideRowsFrom(rowIndex);
+
+            _scrollbarGo.SetActive(needsScrollbar);
+            _scrollContentRect.sizeDelta = new Vector2(rightInset, _activeContentHeight);
+            _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
+            _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
+            _resizeGripGo.transform.SetAsLastSibling();
+        }
+
+        private void BindPlanetLocationRow(
+            ItemRowView row,
+            PlanetItemLocationEntry entry,
+            bool isBottleneckScan,
+            float rowWidth,
+            int critPct,
+            int warnPct)
+        {
+            CombinedLogisticsItem item = entry.Item;
+            EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
+
+            Color accentColor;
+            Color fillColor;
+            Color transitColor;
+            switch (status)
+            {
+                case EHealthStatus.Critical:
+                    accentColor = CriticalColor;
+                    fillColor = CriticalFillColor;
+                    transitColor = CriticalTransitColor;
+                    break;
+                case EHealthStatus.Warning:
+                    accentColor = WarningColor;
+                    fillColor = WarningFillColor;
+                    transitColor = WarningTransitColor;
+                    break;
+                default:
+                    accentColor = HealthyColor;
+                    fillColor = HealthyFillColor;
+                    transitColor = HealthyTransitColor;
+                    break;
+            }
+
+            row.StatusStripeImage.color = accentColor;
+            row.FillBarImage.color = fillColor;
+            float fillRatio = Mathf.Clamp01(item.FillRatio);
+            float fillWidth = fillRatio * rowWidth;
+            row.FillRatioCached = fillRatio;
+            row.FillBarRect.sizeDelta = new Vector2(fillWidth, 0f);
+
+            float transitRatio = _config.ShowInTransitBar.Value ? item.InboundTransitRatio : 0f;
+            row.TransitRatioCached = transitRatio;
+            if (transitRatio > 0.001f)
+            {
+                if (!row.TransitBarRect.gameObject.activeSelf)
+                {
+                    row.TransitBarRect.gameObject.SetActive(true);
+                }
+                row.TransitBarImage.color = transitColor;
+                row.TransitBarRect.anchoredPosition = new Vector2(fillWidth, 0f);
+                row.TransitBarRect.sizeDelta = new Vector2(transitRatio * rowWidth, 0f);
+            }
+            else if (row.TransitBarRect.gameObject.activeSelf)
+            {
+                row.TransitBarRect.gameObject.SetActive(false);
+            }
+
+            row.IconImage.sprite = item.Icon;
+            row.IconImage.enabled = item.Icon != null;
+
+            string displayName = isBottleneckScan
+                ? $"{entry.PlanetName} • {item.ItemName}"
+                : $"▸ {entry.PlanetName}";
+            int maxChars = Mathf.Max(18, Mathf.RoundToInt((rowWidth - 135f) / 6.8f));
+            if (displayName.Length > maxChars)
+            {
+                displayName = displayName.Substring(0, maxChars - 2) + "..";
+            }
+            row.NameText.text = displayName;
+
+            int ilsSlots = item.SlotCount - item.CollectorSlotCount;
+            string slotDesc;
+            if (item.CollectorSlotCount > 0 && ilsSlots > 0)
+            {
+                slotDesc = $"{ilsSlots} ILS +{item.CollectorSlotCount} OC";
+            }
+            else if (item.CollectorSlotCount > 0)
+            {
+                slotDesc = $"{item.CollectorSlotCount} OC";
+            }
+            else
+            {
+                slotDesc = $"{item.SlotCount} ILS";
+            }
+            row.MetaText.text = $"{entry.StarName} • {slotDesc}";
+
+            string storedStr = CombinedLogisticsItem.FormatAmount(item.StoredCount);
+            string maxStr = CombinedLogisticsItem.FormatAmount(item.MaxCount);
+            row.AmountText.text = $"{storedStr} / {maxStr}";
+            row.AmountText.color = status == EHealthStatus.Healthy
+                ? new Color(0.92f, 0.99f, 0.94f, 1f)
+                : accentColor;
+
+            int pct = item.DisplayPercent;
+            string statusTag = "";
+            if (status == EHealthStatus.Critical)
+            {
+                statusTag = item.Logic == ELogisticStorage.Supply
+                    ? (item.StoredCount == 0 ? "EMPTY " : "LOW ")
+                    : (item.StoredCount == 0 ? "STARVED " : "LOW ");
+            }
+            else if (status == EHealthStatus.Warning)
+            {
+                statusTag = "LOW ";
+            }
+
+            string transitStr = "";
+            if (item.InTransitOrder != 0)
+            {
+                string sign = item.InTransitOrder > 0 ? "+" : "";
+                transitStr = $" ({sign}{CombinedLogisticsItem.FormatAmount(item.InTransitOrder)})";
+            }
+
+            row.SubStatusText.text = $"{statusTag}{pct}%{transitStr}";
+            row.SubStatusText.color = status == EHealthStatus.Healthy
+                ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
+                : accentColor;
+
+            row.AmountText.rectTransform.offsetMax = new Vector2(-28f, -1f);
+            row.SubStatusText.rectTransform.offsetMax = new Vector2(-28f, 0f);
+            if (row.MuteBtnGo != null && !row.MuteBtnGo.activeSelf)
+            {
+                row.MuteBtnGo.SetActive(true);
+            }
+
+            PlanetData capturedPlanet = entry.Planet;
+            int capturedItemId = item.ItemId;
+            row.OnRowClick = () =>
+            {
+                // When clicking a row in the multi-item Finder Overview, also offer focusing that single item or returning to overview
+                if (isBottleneckScan && capturedItemId > 0)
+                {
+                    if (!_hasSavedFinderSnapshot)
+                    {
+                        _config.CopyHiddenItemsSnapshot(_lastGalaxySeed, _lastTargetAstroId, _savedFinderHiddenSnapshot);
+                        _savedFinderOnlyBottlenecks = _finderOnlyBottlenecks;
+                        _hasSavedFinderSnapshot = true;
+                    }
+                    _config.SetCustomSingleItemOnly(_lastGalaxySeed, _lastTargetAstroId, capturedItemId);
+                    _finderOnlyBottlenecks = false;
+                    if (_customPickerOpen)
+                    {
+                        SetCustomPickerTab(_customPickerActiveTab);
+                    }
+                    RefreshOptionsMenuState();
+                    if (_scrollRect != null)
+                    {
+                        _scrollRect.verticalNormalizedPosition = 1f;
+                    }
+                    _forceRefresh = true;
+                }
+                SelectAndNavigateToPlanet(capturedPlanet);
+            };
+            row.OnMuteClick = () =>
+            {
+                if (capturedPlanet != null)
+                {
+                    _config.SetAstroIgnored(_lastGalaxySeed, capturedPlanet.astroId, true);
+                    RefreshCustomPickerPlanetsList();
+                    RefreshOptionsMenuState();
+                    _forceRefresh = true;
+                }
+            };
+        }
+
+        private void SelectAndNavigateToPlanet(PlanetData planet)
+        {
+            if (planet == null)
+            {
+                return;
+            }
+
+            // 1. Set the player's navigation indicator (yellow guidance line + Starmap pin)
+            if (GameMain.mainPlayer?.navigation != null)
+            {
+                GameMain.mainPlayer.navigation.indicatorAstroId = planet.astroId;
+            }
+
+            // 2. Focus and center the planet on the Starmap
+            if (_currentStarmap != null)
+            {
+                UIStarmapPlanet targetNode = null;
+                if (_currentStarmap.planetUIs != null)
+                {
+                    for (int i = 0; i < _currentStarmap.planetUIs.Length; i++)
+                    {
+                        UIStarmapPlanet pui = _currentStarmap.planetUIs[i];
+                        if (pui != null && pui.planet == planet)
+                        {
+                            targetNode = pui;
+                            break;
+                        }
+                    }
+                }
+
+                UIStarmapStar starNode = null;
+                if (planet.star != null && _currentStarmap.starUIs != null)
+                {
+                    for (int i = 0; i < _currentStarmap.starUIs.Length; i++)
+                    {
+                        UIStarmapStar sui = _currentStarmap.starUIs[i];
+                        if (sui != null && sui.star == planet.star)
+                        {
+                            starNode = sui;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetNode != null)
+                {
+                    _currentStarmap.focusPlanet = targetNode;
+                    _currentStarmap.focusStar = null;
+                    _currentStarmap.OnCursorFunction2Click(0);
+                }
+                else if (starNode != null)
+                {
+                    _currentStarmap.focusStar = starNode;
+                    _currentStarmap.focusPlanet = null;
+                    _currentStarmap.OnCursorFunction2Click(0);
+                }
+            }
         }
 
         private void HideRowsFrom(int startIndex)

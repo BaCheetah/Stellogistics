@@ -1,9 +1,0 @@
-{
-  "name": "Stellogistics",
-  "version_number": "1.1.0",
-  "website_url": "https://github.com/BaCheetah/Stellogistics",
-  "description": "Displays combined Interplanetary Logistics (ILS) imports and exports per planet or star system on the Starmap sidebar, with shortage indicators when sources run empty.",
-  "dependencies": [
-    "xiaoye97-BepInEx-5.4.17"
-  ]
-}

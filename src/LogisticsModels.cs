@@ -39,6 +39,19 @@ namespace Stellogistics
             }
         }
 
+        public float InboundTransitRatio
+        {
+            get
+            {
+                if (MaxCount <= 0 || InTransitOrder <= 0)
+                {
+                    return 0f;
+                }
+                float remainingRatio = Mathf.Clamp01(1f - FillRatio);
+                return Mathf.Clamp((float)InTransitOrder / MaxCount, 0f, remainingRatio);
+            }
+        }
+
         public int DisplayPercent
         {
             get
@@ -158,5 +171,47 @@ namespace Stellogistics
 
         public bool HasAnyStations => TotalIlsCount > 0 || TotalCollectorCount > 0;
         public bool HasAnySlots => Exports.Count > 0 || Imports.Count > 0;
+    }
+
+    public class PlanetItemLocationEntry
+    {
+        public PlanetData Planet;
+        public StarData Star;
+        public int PlanetId;
+        public int PlanetAstroId;
+        public string PlanetName = "";
+        public string StarName = "";
+        public CombinedLogisticsItem Item;
+    }
+
+    public class GalaxyItemSearchSummary
+    {
+        public bool IsBottleneckScan;
+        public int CheckedItemCount;
+        public int ItemId;
+        public string ItemName = "";
+        public Sprite Icon;
+        public List<PlanetItemLocationEntry> ExportingPlanets = new List<PlanetItemLocationEntry>();
+        public List<PlanetItemLocationEntry> ImportingPlanets = new List<PlanetItemLocationEntry>();
+        public int CriticalExportPlanetCount;
+        public int WarningExportPlanetCount;
+        public int CriticalImportPlanetCount;
+        public int WarningImportPlanetCount;
+        public int IgnoredPlanetMatchCount;
+
+        public bool HasAnyLocations => ExportingPlanets.Count > 0 || ImportingPlanets.Count > 0;
+    }
+
+    public class PlanetLogisticsFilterEntry
+    {
+        public bool IsStarSystem;
+        public int AstroId;
+        public int ParentStarAstroId;
+        public StarData Star;
+        public PlanetData Planet;
+        public string DisplayName = "";
+        public string MetaInfo = "";
+        public int IlsCount;
+        public int CollectorCount;
     }
 }

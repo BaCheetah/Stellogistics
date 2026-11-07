@@ -47,6 +47,7 @@ namespace Stellogistics
         public ConfigEntry<EStarFilterMode> StarSystemFilterMode { get; }
         public ConfigEntry<ESortOrder> SortOrder { get; }
         public ConfigEntry<bool> ShowOnHover { get; }
+        public ConfigEntry<bool> ShowInTransitBar { get; }
         public ConfigEntry<int> CriticalThresholdPercent { get; }
         public ConfigEntry<int> WarningThresholdPercent { get; }
         public ConfigEntry<int> ExcludeFullThresholdPercent { get; }
@@ -60,9 +61,11 @@ namespace Stellogistics
         public ConfigEntry<EItemCategoryFilter> DefaultCategoryFilter { get; }
         public ConfigEntry<string> SavedAstroFilters { get; }
         public ConfigEntry<string> SavedAstroItemOverrides { get; }
+        public ConfigEntry<string> SavedIgnoredAstros { get; }
 
         private readonly Dictionary<string, EItemCategoryFilter> _astroFilterCache = new Dictionary<string, EItemCategoryFilter>();
         private readonly Dictionary<string, HashSet<int>> _astroItemOverridesCache = new Dictionary<string, HashSet<int>>();
+        private readonly Dictionary<int, HashSet<int>> _ignoredAstrosBySeed = new Dictionary<int, HashSet<int>>();
 
         public StellogisticsConfig(ConfigFile config)
         {
@@ -107,6 +110,13 @@ namespace Stellogistics
                 "ShowOnHover",
                 true,
                 "Show logistics when hovering a planet or star in the Starmap even if not clicked/selected."
+            );
+
+            ShowInTransitBar = config.Bind(
+                "Display",
+                "ShowInTransitBar",
+                true,
+                "Show a hatched bar extension on item rows indicating inbound (+ in-transit) cargo on the way."
             );
 
             CriticalThresholdPercent = config.Bind(
@@ -155,7 +165,7 @@ namespace Stellogistics
                 DefaultMaxHeight,
                 new ConfigDescription(
                     "Maximum height of the scrollable list area in pixels.",
-                    new AcceptableValueRange<float>(120f, 950f)
+                    new AcceptableValueRange<float>(56f, 950f)
                 )
             );
 
@@ -201,8 +211,16 @@ namespace Stellogistics
                 "Serialized per-star and per-planet individual item filter overrides (format: seed_astroId:id1|id2,...)."
             );
 
+            SavedIgnoredAstros = config.Bind(
+                "Filters",
+                "SavedIgnoredAstros",
+                "",
+                "Serialized per-galaxy ignored planet and star system astroIds for the Finder (format: seed:astroId1|astroId2,...)."
+            );
+
             ParseSavedAstroFilters();
             ParseSavedAstroItemOverrides();
+            ParseSavedIgnoredAstros();
         }
 
         private const string GlobalFilterKey = "global";
@@ -428,6 +446,52 @@ namespace Stellogistics
             FlushSavedAstroItemOverrides();
         }
 
+        public void CopyHiddenItemsSnapshot(int galaxySeed, int astroId, HashSet<int> destination)
+        {
+            if (destination == null)
+            {
+                return;
+            }
+            destination.Clear();
+            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            destination.UnionWith(hiddenItems);
+        }
+
+        public void RestoreHiddenItemsSnapshot(int galaxySeed, int astroId, HashSet<int> snapshot)
+        {
+            if (snapshot == null)
+            {
+                return;
+            }
+            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            hiddenItems.Clear();
+            hiddenItems.UnionWith(snapshot);
+            FlushSavedAstroItemOverrides();
+        }
+
+        public void SetCustomSingleItemOnly(int galaxySeed, int astroId, int itemId)
+        {
+            if (itemId <= 0)
+            {
+                return;
+            }
+            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            hiddenItems.Clear();
+            if (LDB.items != null && LDB.items.dataArray != null)
+            {
+                ItemProto[] allProtos = LDB.items.dataArray;
+                for (int i = 0; i < allProtos.Length; i++)
+                {
+                    ItemProto proto = allProtos[i];
+                    if (proto != null && proto.ID > 0 && proto.ID != itemId)
+                    {
+                        hiddenItems.Add(proto.ID);
+                    }
+                }
+            }
+            FlushSavedAstroItemOverrides();
+        }
+
         public void ResetFilterForAstro(int galaxySeed, int astroId)
         {
             DefaultCategoryFilter.Value = EItemCategoryFilter.All;
@@ -459,6 +523,140 @@ namespace Stellogistics
                 hiddenItems.Add(itemId);
             }
             FlushSavedAstroItemOverrides();
+        }
+
+        private void ParseSavedIgnoredAstros()
+        {
+            _ignoredAstrosBySeed.Clear();
+            string raw = SavedIgnoredAstros.Value;
+            if (string.IsNullOrEmpty(raw))
+            {
+                return;
+            }
+
+            string[] entries = raw.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < entries.Length; i++)
+            {
+                string[] kv = entries[i].Split(':');
+                if (kv.Length == 2 && int.TryParse(kv[0].Trim(), out int seed))
+                {
+                    string[] idStrs = kv[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                    var set = new HashSet<int>();
+                    for (int j = 0; j < idStrs.Length; j++)
+                    {
+                        if (int.TryParse(idStrs[j], out int astroId) && astroId > 0)
+                        {
+                            set.Add(astroId);
+                        }
+                    }
+                    if (set.Count > 0)
+                    {
+                        _ignoredAstrosBySeed[seed] = set;
+                    }
+                }
+            }
+        }
+
+        private void FlushSavedIgnoredAstros()
+        {
+            var sb = new StringBuilder();
+            foreach (KeyValuePair<int, HashSet<int>> kvp in _ignoredAstrosBySeed)
+            {
+                if (kvp.Value == null || kvp.Value.Count == 0)
+                {
+                    continue;
+                }
+                if (sb.Length > 0)
+                {
+                    sb.Append(',');
+                }
+                sb.Append(kvp.Key).Append(':');
+                bool first = true;
+                foreach (int astroId in kvp.Value)
+                {
+                    if (!first) sb.Append('|');
+                    sb.Append(astroId);
+                    first = false;
+                }
+            }
+            SavedIgnoredAstros.Value = sb.ToString();
+            _configFile.Save();
+        }
+
+        public bool IsAstroIgnored(int galaxySeed, int astroId)
+        {
+            if (astroId <= 0)
+            {
+                return false;
+            }
+            return _ignoredAstrosBySeed.TryGetValue(galaxySeed, out HashSet<int> set) && set.Contains(astroId);
+        }
+
+        public bool IsPlanetOrStarIgnored(int galaxySeed, PlanetData planet)
+        {
+            if (planet == null)
+            {
+                return false;
+            }
+            if (IsAstroIgnored(galaxySeed, planet.astroId))
+            {
+                return true;
+            }
+            if (planet.star != null && IsAstroIgnored(galaxySeed, planet.star.astroId))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public void ToggleAstroIgnored(int galaxySeed, int astroId)
+        {
+            if (astroId <= 0)
+            {
+                return;
+            }
+            if (!_ignoredAstrosBySeed.TryGetValue(galaxySeed, out HashSet<int> set))
+            {
+                set = new HashSet<int>();
+                _ignoredAstrosBySeed[galaxySeed] = set;
+            }
+            if (!set.Remove(astroId))
+            {
+                set.Add(astroId);
+            }
+            FlushSavedIgnoredAstros();
+        }
+
+        public void SetAstroIgnored(int galaxySeed, int astroId, bool ignored)
+        {
+            if (astroId <= 0)
+            {
+                return;
+            }
+            if (!_ignoredAstrosBySeed.TryGetValue(galaxySeed, out HashSet<int> set))
+            {
+                if (!ignored) return;
+                set = new HashSet<int>();
+                _ignoredAstrosBySeed[galaxySeed] = set;
+            }
+            bool changed = ignored ? set.Add(astroId) : set.Remove(astroId);
+            if (changed)
+            {
+                FlushSavedIgnoredAstros();
+            }
+        }
+
+        public void ClearAllIgnoredAstros(int galaxySeed)
+        {
+            if (_ignoredAstrosBySeed.Remove(galaxySeed))
+            {
+                FlushSavedIgnoredAstros();
+            }
+        }
+
+        public int GetIgnoredAstroCount(int galaxySeed)
+        {
+            return _ignoredAstrosBySeed.TryGetValue(galaxySeed, out HashSet<int> set) ? set.Count : 0;
         }
 
         public void SaveCustomPanelPosition(float x, float y)
