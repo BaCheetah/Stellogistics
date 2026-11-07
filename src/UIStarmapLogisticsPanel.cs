@@ -380,8 +380,8 @@ namespace Stellogistics
                 float interval = rate switch
                 {
                     ERefreshRate.Fast => 0.10f,
-                    ERefreshRate.Slow => 1.00f,
-                    _ => 0.25f
+                    ERefreshRate.Slow => 10.0f,
+                    _ => 1.00f
                 };
                 _nextRefreshTime = now + interval;
 

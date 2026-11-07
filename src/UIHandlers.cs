@@ -40,6 +40,19 @@ namespace Stellogistics
         }
     }
 
+    public class PointerClickHandler : MonoBehaviour, IPointerClickHandler
+    {
+        public Action OnClick;
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData != null && !eventData.dragging && eventData.button == PointerEventData.InputButton.Left)
+            {
+                OnClick?.Invoke();
+            }
+        }
+    }
+
     public class PanelDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public RectTransform TargetRect;

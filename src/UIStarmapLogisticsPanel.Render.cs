@@ -179,8 +179,11 @@ namespace Stellogistics
             _subtitleText.text = $"{summary.TargetSubtitle}{pausedSuffix}";
 
             int totalShips = summary.TotalIdleShips + summary.TotalWorkShips;
+            bool showIdle = _config.ShowIdleVessels.Value;
+            int shownShips = showIdle ? summary.TotalIdleShips : summary.TotalWorkShips;
+            string shipStatusLabel = showIdle ? "idle" : "on route";
             string filterNote = summary.FilteredOutItemCount > 0 ? $"  •  {summary.FilteredOutItemCount} filtered" : "";
-            _fleetInfoText.text = $"Vessels: {summary.TotalIdleShips}/{totalShips} idle  •  Warpers: {CombinedLogisticsItem.FormatAmount(summary.TotalWarperCount)}{filterNote}";
+            _fleetInfoText.text = $"Vessels: {shownShips}/{totalShips} {shipStatusLabel}  •  Warpers: {CombinedLogisticsItem.FormatAmount(summary.TotalWarperCount)}{filterNote}";
 
             _filterModeBtn.gameObject.SetActive(summary.IsStarSystem);
             if (summary.IsStarSystem)

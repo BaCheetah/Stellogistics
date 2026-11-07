@@ -64,6 +64,7 @@ namespace Stellogistics
         public ConfigEntry<ESortOrder> SortOrder { get; }
         public ConfigEntry<bool> ShowOnHover { get; }
         public ConfigEntry<bool> ShowInTransitBar { get; }
+        public ConfigEntry<bool> ShowIdleVessels { get; }
         public ConfigEntry<ERefreshRate> RefreshRate { get; }
         public ConfigEntry<int> CriticalThresholdPercent { get; }
         public ConfigEntry<int> WarningThresholdPercent { get; }
@@ -128,7 +129,7 @@ namespace Stellogistics
                 "Display",
                 "HoverStarmapTargets",
                 false,
-                "Show logistics when hovering a planet or star in the Starmap (Default: false)."
+                "Switch to planet or star on hover in the Starmap (Default: false)."
             );
 
             ShowInTransitBar = config.Bind(
@@ -138,14 +139,21 @@ namespace Stellogistics
                 "Show a hatched bar extension on item rows indicating inbound (+ in-transit) cargo on the way."
             );
 
+            ShowIdleVessels = config.Bind(
+                "Display",
+                "ShowIdleVessels",
+                false,
+                "When false (Default), shows Vessels on route; when true, shows idle Vessels. Click the Vessels text in the header to toggle."
+            );
+
             RefreshRate = config.Bind(
                 "Display",
                 "RefreshRate",
                 ERefreshRate.Medium,
                 "How frequently the Starmap logistics panel refreshes its data:\n" +
-                "Fast: Every 0.10s (10 Hz)\n" +
-                "Medium: Every 0.25s (4 Hz, Default)\n" +
-                "Slow: Every 1.00s (1 Hz)\n" +
+                "Fast (Live): Every 0.10s (10/s)\n" +
+                "Medium: Every 1.00s (1/s, Default)\n" +
+                "Slow: Every 10.0s (1/10s)\n" +
                 "Paused: Pauses automatic periodic refreshes (still updates on target change or UI clicks)."
             );
 

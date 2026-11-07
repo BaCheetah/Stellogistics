@@ -120,9 +120,22 @@ namespace Stellogistics
             _subtitleText = CreateText("SubtitleText", _headerRect, 11, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.68f, 0.82f, 0.94f, 1f));
             _subtitleText.rectTransform.SetTopStretch(new Vector2(10f, -33f), new Vector2(-20f, 18f), 0f);
 
-            // Fleet / Warper Info
+            // Fleet / Warper Info (stealthily clickable to toggle Vessels between 'on route' and 'idle')
             _fleetInfoText = CreateText("FleetInfoText", _headerRect, 11, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.56f, 0.72f, 0.85f, 0.95f));
             _fleetInfoText.rectTransform.SetTopStretch(new Vector2(10f, -52f), new Vector2(-20f, 18f), 0f);
+            _fleetInfoText.raycastTarget = true;
+            PointerClickHandler fleetClick = _fleetInfoText.gameObject.AddComponent<PointerClickHandler>();
+            fleetClick.OnClick = () =>
+            {
+                if (_finderModeActive)
+                {
+                    return;
+                }
+                CloseDropdownMenus();
+                _config.ShowIdleVessels.Value = !_config.ShowIdleVessels.Value;
+                _config.Save();
+                _forceRefresh = true;
+            };
 
             // Scroll View
             GameObject scrollGo = new GameObject("ScrollView", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(Mask));

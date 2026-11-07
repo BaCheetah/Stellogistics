@@ -232,7 +232,7 @@ namespace Stellogistics
 
             _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
                 _generalOptionsMenuRect,
-                "Show Panel on Starmap Hover",
+                "Switch to Planet on Hover",
                 y,
                 () => _config.ShowOnHover.Value,
                 () => _config.ShowOnHover.Value = !_config.ShowOnHover.Value
@@ -244,7 +244,7 @@ namespace Stellogistics
             refreshTitle.text = "REFRESH RATE";
             y -= 17f;
 
-            string[] rateLabels = { "Fast", "Medium", "Slow", "Paused" };
+            string[] rateLabels = { "Live", "Medium", "Slow", "Paused" };
             for (int i = 0; i < 4; i++)
             {
                 ERefreshRate rate = (ERefreshRate)i;
