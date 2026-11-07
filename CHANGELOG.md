@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+- **Task Manager-Style Refresh Rate Control (`Options ▾`)**:
+  - Added a 4-mode Refresh Rate selector in `Options ▾`: `Fast` (0.10s), `Medium` (0.25s, Default), `Slow` (1.00s), and `Paused` (`⏸ Paused`, freezing periodic updates so rows stay still while inspecting).
+
 ## 2.1.0
 - **Planet & Star System Hub Detection (`⇄ Hub`)**:
   - Automatically detects when a planet (or star system) both exports and imports the same item, displaying a cyan `⇄ Hub (Imp ...)` / `⇄ Hub (Exp ...)` badge with the counterpart capacity on both rows (even if one side is hidden by filters).

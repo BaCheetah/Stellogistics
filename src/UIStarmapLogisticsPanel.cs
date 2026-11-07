@@ -281,6 +281,14 @@ namespace Stellogistics
         private GameObject _generalOptionsMenuGo;
         private RectTransform _generalOptionsMenuRect;
         private readonly List<GeneralToggleRow> _generalOptionToggles = new List<GeneralToggleRow>();
+        private Image _refreshFastBtnBg;
+        private Image _refreshMedBtnBg;
+        private Image _refreshSlowBtnBg;
+        private Image _refreshPausedBtnBg;
+        private Text _refreshFastBtnTxt;
+        private Text _refreshMedBtnTxt;
+        private Text _refreshSlowBtnTxt;
+        private Text _refreshPausedBtnTxt;
 
         private GameObject _customPickerGo;
         private RectTransform _customPickerRect;
@@ -1053,8 +1061,8 @@ namespace Stellogistics
             _generalOptionsMenuRect.anchorMin = new Vector2(1f, 1f);
             _generalOptionsMenuRect.anchorMax = new Vector2(1f, 1f);
             _generalOptionsMenuRect.pivot = new Vector2(1f, 1f);
-            _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -30f);
-            _generalOptionsMenuRect.sizeDelta = new Vector2(236f, 154f);
+            _generalOptionsMenuRect.anchoredPosition = new Vector2(-4f, -32f);
+            _generalOptionsMenuRect.sizeDelta = new Vector2(236f, 198f);
 
             _generalOptionsHoverTracker = _generalOptionsMenuGo.GetComponent<PointerHoverTracker>();
 
@@ -1102,9 +1110,39 @@ namespace Stellogistics
                 () => _config.ShowOnHover.Value,
                 () => _config.ShowOnHover.Value = !_config.ShowOnHover.Value
             ));
+            y -= 28f;
+
+            Text refreshTitle = CreateText("RefreshRateLabel", _generalOptionsMenuRect, 10, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.70f, 0.85f, 0.96f, 1f));
+            refreshTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
+            refreshTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+            refreshTitle.rectTransform.pivot = new Vector2(0f, 1f);
+            refreshTitle.rectTransform.anchoredPosition = new Vector2(8f, y);
+            refreshTitle.rectTransform.sizeDelta = new Vector2(-16f, 15f);
+            refreshTitle.text = "REFRESH RATE";
+            y -= 17f;
+
+            Button fastBtn = CreateHeaderButton("BtnRefreshFast", _generalOptionsMenuRect, new Vector2(6f, y), new Vector2(53f, 20f), false, out _refreshFastBtnTxt);
+            _refreshFastBtnTxt.text = "Fast";
+            _refreshFastBtnBg = fastBtn.GetComponent<Image>();
+            fastBtn.onClick.AddListener(() => SetRefreshRate(ERefreshRate.Fast));
+
+            Button medBtn = CreateHeaderButton("BtnRefreshMed", _generalOptionsMenuRect, new Vector2(63f, y), new Vector2(53f, 20f), false, out _refreshMedBtnTxt);
+            _refreshMedBtnTxt.text = "Medium";
+            _refreshMedBtnBg = medBtn.GetComponent<Image>();
+            medBtn.onClick.AddListener(() => SetRefreshRate(ERefreshRate.Medium));
+
+            Button slowBtn = CreateHeaderButton("BtnRefreshSlow", _generalOptionsMenuRect, new Vector2(120f, y), new Vector2(53f, 20f), false, out _refreshSlowBtnTxt);
+            _refreshSlowBtnTxt.text = "Slow";
+            _refreshSlowBtnBg = slowBtn.GetComponent<Image>();
+            slowBtn.onClick.AddListener(() => SetRefreshRate(ERefreshRate.Slow));
+
+            Button pausedBtn = CreateHeaderButton("BtnRefreshPaused", _generalOptionsMenuRect, new Vector2(177f, y), new Vector2(53f, 20f), false, out _refreshPausedBtnTxt);
+            _refreshPausedBtnTxt.text = "Paused";
+            _refreshPausedBtnBg = pausedBtn.GetComponent<Image>();
+            pausedBtn.onClick.AddListener(() => SetRefreshRate(ERefreshRate.Paused));
             y -= 26f;
 
-            Button resetPosBtn = CreateHeaderButton("BtnResetPos", _generalOptionsMenuRect, new Vector2(-6f, y - 6f), new Vector2(224f, 22f), true, out Text resetPosTxt);
+            Button resetPosBtn = CreateHeaderButton("BtnResetPos", _generalOptionsMenuRect, new Vector2(-6f, y - 4f), new Vector2(224f, 22f), true, out Text resetPosTxt);
             resetPosTxt.text = "Reset UI Position & Size";
             resetPosBtn.onClick.AddListener(() =>
             {
@@ -2442,6 +2480,14 @@ namespace Stellogistics
             }
         }
 
+        private void SetRefreshRate(ERefreshRate rate)
+        {
+            _config.RefreshRate.Value = rate;
+            _nextRefreshTime = 0f;
+            _forceRefresh = true;
+            RefreshGeneralOptionsMenuState();
+        }
+
         private void RefreshGeneralOptionsMenuState()
         {
             if (!_generalOptionsMenuOpen)
@@ -2461,6 +2507,23 @@ namespace Stellogistics
                     ? new Color(0.92f, 0.96f, 1f, 1f)
                     : new Color(0.50f, 0.58f, 0.68f, 0.85f);
             }
+
+            ERefreshRate rate = _config.RefreshRate.Value;
+            Color activeBg = new Color(0.22f, 0.44f, 0.68f, 0.98f);
+            Color pausedActiveBg = new Color(0.52f, 0.34f, 0.12f, 0.98f);
+            Color inactiveBg = new Color(0.11f, 0.17f, 0.26f, 0.85f);
+            Color activeTxt = new Color(0.95f, 0.99f, 1f, 1f);
+            Color inactiveTxt = new Color(0.58f, 0.70f, 0.82f, 0.85f);
+
+            if (_refreshFastBtnBg != null) _refreshFastBtnBg.color = rate == ERefreshRate.Fast ? activeBg : inactiveBg;
+            if (_refreshMedBtnBg != null) _refreshMedBtnBg.color = rate == ERefreshRate.Medium ? activeBg : inactiveBg;
+            if (_refreshSlowBtnBg != null) _refreshSlowBtnBg.color = rate == ERefreshRate.Slow ? activeBg : inactiveBg;
+            if (_refreshPausedBtnBg != null) _refreshPausedBtnBg.color = rate == ERefreshRate.Paused ? pausedActiveBg : inactiveBg;
+
+            if (_refreshFastBtnTxt != null) _refreshFastBtnTxt.color = rate == ERefreshRate.Fast ? activeTxt : inactiveTxt;
+            if (_refreshMedBtnTxt != null) _refreshMedBtnTxt.color = rate == ERefreshRate.Medium ? activeTxt : inactiveTxt;
+            if (_refreshSlowBtnTxt != null) _refreshSlowBtnTxt.color = rate == ERefreshRate.Slow ? activeTxt : inactiveTxt;
+            if (_refreshPausedBtnTxt != null) _refreshPausedBtnTxt.color = rate == ERefreshRate.Paused ? WarningColor : inactiveTxt;
         }
 
         private void OnCategoryToggleClicked(EItemCategoryFilter category)
@@ -2626,10 +2689,18 @@ namespace Stellogistics
             }
 
             float now = Time.unscaledTime;
-            if (_forceRefresh || now >= _nextRefreshTime)
+            ERefreshRate rate = _config.RefreshRate.Value;
+            bool timerDue = rate != ERefreshRate.Paused && now >= _nextRefreshTime;
+            if (_forceRefresh || timerDue)
             {
                 _forceRefresh = false;
-                _nextRefreshTime = now + 0.25f;
+                float interval = rate switch
+                {
+                    ERefreshRate.Fast => 0.10f,
+                    ERefreshRate.Slow => 1.00f,
+                    _ => 0.25f
+                };
+                _nextRefreshTime = now + interval;
 
                 if (_finderModeActive)
                 {
@@ -2760,7 +2831,10 @@ namespace Stellogistics
             _resizeGripGo.SetActive(true);
 
             _titleText.text = summary.TargetName;
-            _subtitleText.text = summary.TargetSubtitle;
+            string pausedSuffix = _config.RefreshRate.Value == ERefreshRate.Paused
+                ? " • <color=#FFD24C>⏸ Paused</color>"
+                : "";
+            _subtitleText.text = $"{summary.TargetSubtitle}{pausedSuffix}";
 
             int totalShips = summary.TotalIdleShips + summary.TotalWorkShips;
             string filterNote = summary.FilteredOutItemCount > 0 ? $"  •  {summary.FilteredOutItemCount} filtered" : "";
@@ -3167,10 +3241,13 @@ namespace Stellogistics
                 ? $" • {summary.IgnoredPlanetMatchCount} Ignored"
                 : (totalIgnoredAstros > 0 ? $" • {totalIgnoredAstros} Filtered" : "");
 
+            string pausedSuffix = _config.RefreshRate.Value == ERefreshRate.Paused
+                ? " • <color=#FFD24C>⏸ Paused</color>"
+                : "";
             _titleText.text = $"Finder: {summary.ItemName}";
             _subtitleText.text = (_finderOnlyBottlenecks && summary.CheckedItemCount != 1)
-                ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}"
-                : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}";
+                ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}{pausedSuffix}"
+                : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}{pausedSuffix}";
             _fleetInfoText.text = "Click row to focus & pin • [✕] to ignore planet";
 
             _sortModeBtnText.text = _config.SortOrder.Value switch

@@ -19,6 +19,14 @@ namespace Stellogistics
         StoredAmountDesc = 2
     }
 
+    public enum ERefreshRate
+    {
+        Fast = 0,
+        Medium = 1,
+        Slow = 2,
+        Paused = 3
+    }
+
     [Flags]
     public enum EItemCategoryFilter
     {
@@ -48,6 +56,7 @@ namespace Stellogistics
         public ConfigEntry<ESortOrder> SortOrder { get; }
         public ConfigEntry<bool> ShowOnHover { get; }
         public ConfigEntry<bool> ShowInTransitBar { get; }
+        public ConfigEntry<ERefreshRate> RefreshRate { get; }
         public ConfigEntry<int> CriticalThresholdPercent { get; }
         public ConfigEntry<int> WarningThresholdPercent { get; }
         public ConfigEntry<int> ExcludeFullThresholdPercent { get; }
@@ -117,6 +126,17 @@ namespace Stellogistics
                 "ShowInTransitBar",
                 true,
                 "Show a hatched bar extension on item rows indicating inbound (+ in-transit) cargo on the way."
+            );
+
+            RefreshRate = config.Bind(
+                "Display",
+                "RefreshRate",
+                ERefreshRate.Medium,
+                "How frequently the Starmap logistics panel refreshes its data:\n" +
+                "Fast: Every 0.10s (10 Hz)\n" +
+                "Medium: Every 0.25s (4 Hz, Default)\n" +
+                "Slow: Every 1.00s (1 Hz)\n" +
+                "Paused: Pauses automatic periodic refreshes (still updates on target change or UI clicks)."
             );
 
             CriticalThresholdPercent = config.Bind(

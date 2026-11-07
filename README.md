@@ -57,7 +57,7 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
   - One shared, spoiler-free picker window across both Starmap filtering and the Galaxy Finder, with **`✓ Check All`**, **`✕ Uncheck All`**, and **`! ≤40% Only`** controls.
 
 ### 6. Flexible Window Management & `Options ▾`
-- **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), Starmap hover behavior, or reset UI position and size.
+- **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), Starmap hover behavior, choose a Task Manager-style **Refresh Rate** (`Fast`, `Medium`, `Slow`, `Paused`), or reset UI position and size.
 - **Freely Draggable & Resizable (`◢`)**:
   - Supports custom heights (including intentional empty space without snapping back), responsive two-row header button stacking at narrow widths, and multi-stage drag collapsing into a compact **`Stellogistics` taskbar tab**.
 
@@ -96,7 +96,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.1.0.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.1.1.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.1.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.1.1.zip` as a local mod in Thunderstore Mod Manager / r2modman).
