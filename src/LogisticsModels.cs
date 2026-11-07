@@ -25,12 +25,9 @@ namespace Stellogistics
         public int CollectorSlotCount;
         public int PlanetCount;
         public bool HasExternalStarPair;
-        public bool HasWarpCapableStation;
 
         public bool IsHub;
-        public long HubCounterpartStored;
         public long HubCounterpartMax;
-        public int HubCounterpartSlots;
         public bool HasLogisticsBottleneck;
 
         public float FillRatio
@@ -157,7 +154,6 @@ namespace Stellogistics
         public bool IsStarSystem;
         public int TargetAstroId;
         public int GalaxySeed;
-        public EItemCategoryFilter ActiveCategoryFilter = EItemCategoryFilter.All;
         public int FilteredOutItemCount;
 
         public int TotalIlsCount;

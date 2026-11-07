@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Stellogistics
 {
@@ -16,18 +17,79 @@ namespace Stellogistics
             public bool MultipleStarSystems;
         }
 
+        private struct StationTotals
+        {
+            public int TotalIlsCount;
+            public int TotalCollectorCount;
+            public int TotalWarperCount;
+            public int TotalIdleShips;
+            public int TotalWorkShips;
+        }
+
+        // Cached stored item IDs (TTL 5.0s)
+        private static readonly HashSet<int> _cachedStoredIds = new HashSet<int>();
+        private static float _storedIdsCacheExpiryTime = -1f;
+        private static int _storedIdsCachedSeed = -1;
+
+        // Cached galaxy supply availability (TTL 1.0s)
+        private static readonly Dictionary<int, SupplyAvailability> _cachedSupplyAvailability = new Dictionary<int, SupplyAvailability>();
+        private static float _supplyCacheExpiryTime = -1f;
+        private static int _supplyCachedSeed = -1;
+        private static bool _supplyCachedIncludeOc;
+        private static int _supplyCachedCritPct = -1;
+        private static int _supplyCachedWarnPct = -1;
+
+        public static void InvalidateCaches()
+        {
+            _storedIdsCacheExpiryTime = -1f;
+            _supplyCacheExpiryTime = -1f;
+        }
+
+        private static void ForEachLogisticsPlanet(Action<StarData, PlanetData, StationComponent[], int> action)
+        {
+            StarData[] stars = GameMain.galaxy?.stars;
+            if (stars == null || GameMain.data == null)
+            {
+                return;
+            }
+
+            for (int s = 0; s < stars.Length; s++)
+            {
+                StarData star = stars[s];
+                if (star?.planets == null)
+                {
+                    continue;
+                }
+
+                for (int p = 0; p < star.planets.Length; p++)
+                {
+                    PlanetData planet = star.planets[p];
+                    PlanetTransport transport = planet?.factory?.transport;
+                    StationComponent[] stationPool = transport?.stationPool;
+                    if (stationPool == null || transport.stationCursor <= 0)
+                    {
+                        continue;
+                    }
+
+                    int cursor = Math.Min(transport.stationCursor, stationPool.Length);
+                    if (cursor > 1)
+                    {
+                        action(star, planet, stationPool, cursor);
+                    }
+                }
+            }
+        }
+
         public static LogisticsSummary AggregatePlanet(PlanetData planet, StellogisticsConfig config)
         {
             int galaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
             int astroId = planet != null ? planet.astroId : 0;
-            EItemCategoryFilter categoryFilter = config.GetFilterForAstro(galaxySeed, astroId);
 
             var summary = new LogisticsSummary
             {
                 IsStarSystem = false,
                 TargetAstroId = astroId,
                 GalaxySeed = galaxySeed,
-                ActiveCategoryFilter = categoryFilter,
                 TargetName = planet != null ? planet.displayName : "Unknown Planet"
             };
 
@@ -38,10 +100,10 @@ namespace Stellogistics
 
             var exportsByItem = new Dictionary<int, CombinedLogisticsItem>();
             var importsByItem = new Dictionary<int, CombinedLogisticsItem>();
-
             StationComponent[] gStationPool = GameMain.data.galacticTransport?.stationPool;
             int starId = planet.star != null ? planet.star.id : (planet.id / 100);
 
+            StationTotals totals = default;
             AggregatePlanetStations(
                 planet,
                 starId,
@@ -52,13 +114,10 @@ namespace Stellogistics
                 importsByItem,
                 null,
                 null,
-                ref summary.TotalIlsCount,
-                ref summary.TotalCollectorCount,
-                ref summary.TotalWarperCount,
-                ref summary.TotalIdleShips,
-                ref summary.TotalWorkShips
+                ref totals
             );
 
+            ApplyTotalsToSummary(summary, totals);
             summary.ColonizedPlanetCount = summary.HasAnyStations ? 1 : 0;
             LinkHubItems(exportsByItem, importsByItem);
             FinalizeSummary(summary, exportsByItem, importsByItem, config, planet.id, 0);
@@ -75,18 +134,16 @@ namespace Stellogistics
         {
             int galaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
             int astroId = star != null ? star.astroId : 0;
-            EItemCategoryFilter categoryFilter = config.GetFilterForAstro(galaxySeed, astroId);
 
             var summary = new LogisticsSummary
             {
                 IsStarSystem = true,
                 TargetAstroId = astroId,
                 GalaxySeed = galaxySeed,
-                ActiveCategoryFilter = categoryFilter,
                 TargetName = star != null ? $"{star.displayName} System" : "Unknown System"
             };
 
-            if (star == null || star.planets == null || GameMain.data == null)
+            if (star?.planets == null || GameMain.data == null)
             {
                 return summary;
             }
@@ -100,6 +157,7 @@ namespace Stellogistics
             EStarFilterMode filterMode = config.StarSystemFilterMode.Value;
             bool includeCollectors = config.IncludeOrbitalCollectors.Value;
 
+            StationTotals totals = default;
             for (int i = 0; i < star.planets.Length; i++)
             {
                 PlanetData planet = star.planets[i];
@@ -108,8 +166,8 @@ namespace Stellogistics
                     continue;
                 }
 
-                int prevIls = summary.TotalIlsCount;
-                int prevCol = summary.TotalCollectorCount;
+                int prevIls = totals.TotalIlsCount;
+                int prevCol = totals.TotalCollectorCount;
 
                 AggregatePlanetStations(
                     planet,
@@ -121,18 +179,16 @@ namespace Stellogistics
                     importsByItem,
                     exportPlanetsByItem,
                     importPlanetsByItem,
-                    ref summary.TotalIlsCount,
-                    ref summary.TotalCollectorCount,
-                    ref summary.TotalWarperCount,
-                    ref summary.TotalIdleShips,
-                    ref summary.TotalWorkShips
+                    ref totals
                 );
 
-                if (summary.TotalIlsCount > prevIls || summary.TotalCollectorCount > prevCol)
+                if (totals.TotalIlsCount > prevIls || totals.TotalCollectorCount > prevCol)
                 {
                     summary.ColonizedPlanetCount++;
                 }
             }
+
+            ApplyTotalsToSummary(summary, totals);
 
             if (filterMode == EStarFilterMode.InterstellarSmart)
             {
@@ -158,6 +214,15 @@ namespace Stellogistics
             return summary;
         }
 
+        private static void ApplyTotalsToSummary(LogisticsSummary summary, StationTotals totals)
+        {
+            summary.TotalIlsCount = totals.TotalIlsCount;
+            summary.TotalCollectorCount = totals.TotalCollectorCount;
+            summary.TotalWarperCount = totals.TotalWarperCount;
+            summary.TotalIdleShips = totals.TotalIdleShips;
+            summary.TotalWorkShips = totals.TotalWorkShips;
+        }
+
         private static void AggregatePlanetStations(
             PlanetData planet,
             int starId,
@@ -168,21 +233,17 @@ namespace Stellogistics
             Dictionary<int, CombinedLogisticsItem> importsByItem,
             Dictionary<int, HashSet<int>> exportPlanetsByItem,
             Dictionary<int, HashSet<int>> importPlanetsByItem,
-            ref int totalIlsCount,
-            ref int totalCollectorCount,
-            ref int totalWarperCount,
-            ref int totalIdleShips,
-            ref int totalWorkShips)
+            ref StationTotals totals)
         {
-            StationComponent[] stationPool = planet.factory?.transport?.stationPool;
-            int stationCursor = planet.factory?.transport != null ? planet.factory.transport.stationCursor : 0;
-
-            if (stationPool == null || stationCursor <= 0)
+            PlanetTransport transport = planet?.factory?.transport;
+            StationComponent[] stationPool = transport?.stationPool;
+            if (stationPool == null || transport.stationCursor <= 0)
             {
                 return;
             }
 
-            for (int i = 1; i < stationCursor; i++)
+            int cursor = Math.Min(transport.stationCursor, stationPool.Length);
+            for (int i = 1; i < cursor; i++)
             {
                 StationComponent station = stationPool[i];
                 if (station == null || station.id != i || !station.isStellar)
@@ -196,14 +257,14 @@ namespace Stellogistics
                     {
                         continue;
                     }
-                    totalCollectorCount++;
+                    totals.TotalCollectorCount++;
                 }
                 else
                 {
-                    totalIlsCount++;
-                    totalWarperCount += station.warperCount;
-                    totalIdleShips += station.idleShipCount;
-                    totalWorkShips += station.workShipCount;
+                    totals.TotalIlsCount++;
+                    totals.TotalWarperCount += station.warperCount;
+                    totals.TotalIdleShips += station.idleShipCount;
+                    totals.TotalWorkShips += station.workShipCount;
                 }
 
                 StationStore[] storage = station.storage;
@@ -245,27 +306,11 @@ namespace Stellogistics
 
                     if (store.remoteLogic == ELogisticStorage.Supply)
                     {
-                        AccumulateSlot(
-                            exportsByItem,
-                            exportPlanetsByItem,
-                            planet.id,
-                            store,
-                            station.isCollector,
-                            hasExternalPair,
-                            stationHasShipsAndWarpers
-                        );
+                        AccumulateSlot(exportsByItem, exportPlanetsByItem, planet.id, store, station.isCollector, hasExternalPair);
                     }
                     else if (store.remoteLogic == ELogisticStorage.Demand)
                     {
-                        AccumulateSlot(
-                            importsByItem,
-                            importPlanetsByItem,
-                            planet.id,
-                            store,
-                            station.isCollector,
-                            hasExternalPair,
-                            stationHasShipsAndWarpers
-                        );
+                        AccumulateSlot(importsByItem, importPlanetsByItem, planet.id, store, station.isCollector, hasExternalPair);
                     }
                 }
             }
@@ -342,8 +387,7 @@ namespace Stellogistics
             int planetId,
             StationStore store,
             bool isCollector,
-            bool hasExternalPair,
-            bool hasWarpCapableStation)
+            bool hasExternalPair)
         {
             if (!dict.TryGetValue(store.itemId, out CombinedLogisticsItem combined))
             {
@@ -371,10 +415,6 @@ namespace Stellogistics
             if (hasExternalPair)
             {
                 combined.HasExternalStarPair = true;
-            }
-            if (hasWarpCapableStation)
-            {
-                combined.HasWarpCapableStation = true;
             }
 
             if (planetsByItem != null)
@@ -469,14 +509,10 @@ namespace Stellogistics
                 {
                     CombinedLogisticsItem expItem = kvp.Value;
                     expItem.IsHub = true;
-                    expItem.HubCounterpartStored = impItem.StoredCount;
                     expItem.HubCounterpartMax = impItem.MaxCount;
-                    expItem.HubCounterpartSlots = impItem.SlotCount;
 
                     impItem.IsHub = true;
-                    impItem.HubCounterpartStored = expItem.StoredCount;
-                    impItem.HubCounterpartMax = expItem.MaxCount;
-                    impItem.HubCounterpartSlots = expItem.SlotCount;
+                    impItem.HubCounterpartMax = expItem.StoredCount > 0 || expItem.MaxCount > 0 ? expItem.MaxCount : 0;
                 }
             }
         }
@@ -551,74 +587,70 @@ namespace Stellogistics
             }
             if (targetStarId > 0)
             {
-                return avail.MultipleStarSystems || avail.SingleSupplierStarId != targetStarId || avail.HealthySupplierPlanetCount >= 2;
+                return avail.MultipleStarSystems || avail.SingleSupplierStarId != targetStarId;
             }
             return true;
         }
 
-        private static void CollectGalaxySupplyAvailability(
+        private static Dictionary<int, SupplyAvailability> GetOrCollectGalaxySupplyAvailability(
             StellogisticsConfig config,
             int galaxySeed,
             int critPct,
-            int warnPct,
-            Dictionary<int, SupplyAvailability> outSupplyByItem)
+            int warnPct)
         {
-            outSupplyByItem.Clear();
-            if (GameMain.galaxy?.stars == null || GameMain.data == null)
+            float now = Time.unscaledTime;
+            bool includeCollectors = config.IncludeOrbitalCollectors.Value;
+
+            if (now < _supplyCacheExpiryTime &&
+                _supplyCachedSeed == galaxySeed &&
+                _supplyCachedIncludeOc == includeCollectors &&
+                _supplyCachedCritPct == critPct &&
+                _supplyCachedWarnPct == warnPct)
             {
-                return;
+                return _cachedSupplyAvailability;
             }
 
-            bool includeCollectors = config.IncludeOrbitalCollectors.Value;
+            _cachedSupplyAvailability.Clear();
+            _supplyCachedSeed = galaxySeed;
+            _supplyCachedIncludeOc = includeCollectors;
+            _supplyCachedCritPct = critPct;
+            _supplyCachedWarnPct = warnPct;
+            _supplyCacheExpiryTime = now + 1.0f;
+
             var planetExports = new Dictionary<int, CombinedLogisticsItem>();
             var planetImports = new Dictionary<int, CombinedLogisticsItem>();
 
-            StarData[] stars = GameMain.galaxy.stars;
-            for (int s = 0; s < stars.Length; s++)
+            ForEachLogisticsPlanet((star, planet, _, __) =>
             {
-                StarData star = stars[s];
-                if (star == null || star.planets == null)
+                if (config.IsPlanetOrStarIgnored(galaxySeed, planet))
                 {
-                    continue;
+                    return;
                 }
 
-                for (int p = 0; p < star.planets.Length; p++)
+                planetExports.Clear();
+                planetImports.Clear();
+                StationTotals dummy = default;
+                AggregatePlanetStations(
+                    planet,
+                    star.id,
+                    includeCollectors,
+                    EStarFilterMode.AllRemoteSlots,
+                    null,
+                    planetExports,
+                    planetImports,
+                    null,
+                    null,
+                    ref dummy
+                );
+
+                foreach (CombinedLogisticsItem expItem in planetExports.Values)
                 {
-                    PlanetData planet = star.planets[p];
-                    StationComponent[] stationPool = planet?.factory?.transport?.stationPool;
-                    int stationCursor = planet?.factory?.transport != null ? planet.factory.transport.stationCursor : 0;
-                    if (stationPool == null || stationCursor <= 0 || config.IsPlanetOrStarIgnored(galaxySeed, planet))
-                    {
-                        continue;
-                    }
-
-                    planetExports.Clear();
-                    planetImports.Clear();
-                    int dIls = 0, dCol = 0, dWarp = 0, dIdle = 0, dWork = 0;
-                    AggregatePlanetStations(
-                        planet,
-                        star.id,
-                        includeCollectors,
-                        EStarFilterMode.AllRemoteSlots,
-                        null,
-                        planetExports,
-                        planetImports,
-                        null,
-                        null,
-                        ref dIls,
-                        ref dCol,
-                        ref dWarp,
-                        ref dIdle,
-                        ref dWork
-                    );
-
-                    foreach (CombinedLogisticsItem expItem in planetExports.Values)
-                    {
-                        planetImports.TryGetValue(expItem.ItemId, out CombinedLogisticsItem impOnSame);
-                        RecordPlanetSupplyAvailability(outSupplyByItem, planet.id, star.id, expItem, impOnSame, critPct, warnPct);
-                    }
+                    planetImports.TryGetValue(expItem.ItemId, out CombinedLogisticsItem impOnSame);
+                    RecordPlanetSupplyAvailability(_cachedSupplyAvailability, planet.id, star.id, expItem, impOnSame, critPct, warnPct);
                 }
-            }
+            });
+
+            return _cachedSupplyAvailability;
         }
 
         private static void EvaluateImportBottleneck(
@@ -640,6 +672,74 @@ namespace Stellogistics
             }
         }
 
+        private static int CompareItems(CombinedLogisticsItem a, CombinedLogisticsItem b, ESortOrder sortOrder)
+        {
+            if (sortOrder == ESortOrder.ShortageFirst)
+            {
+                int pctCmp = a.DisplayPercent.CompareTo(b.DisplayPercent);
+                if (pctCmp != 0) return pctCmp;
+                int ratioCmp = a.FillRatio.CompareTo(b.FillRatio);
+                if (ratioCmp != 0) return ratioCmp;
+                int maxCmp = b.MaxCount.CompareTo(a.MaxCount);
+                if (maxCmp != 0) return maxCmp;
+            }
+            else if (sortOrder == ESortOrder.StoredAmountDesc)
+            {
+                int pctCmp = b.DisplayPercent.CompareTo(a.DisplayPercent);
+                if (pctCmp != 0) return pctCmp;
+                int ratioCmp = b.FillRatio.CompareTo(a.FillRatio);
+                if (ratioCmp != 0) return ratioCmp;
+                int amtCmp = b.StoredCount.CompareTo(a.StoredCount);
+                if (amtCmp != 0) return amtCmp;
+            }
+            return a.ItemId.CompareTo(b.ItemId);
+        }
+
+        private static int CompareLocationEntries(PlanetItemLocationEntry a, PlanetItemLocationEntry b, ESortOrder sortOrder)
+        {
+            int cmp = CompareItems(a.Item, b.Item, sortOrder);
+            if (cmp != 0) return cmp;
+            return a.PlanetId.CompareTo(b.PlanetId);
+        }
+
+        private static PlanetItemLocationEntry MakeLocationEntry(PlanetData planet, StarData star, CombinedLogisticsItem item)
+        {
+            return new PlanetItemLocationEntry
+            {
+                Planet = planet,
+                Star = star,
+                PlanetId = planet.id,
+                PlanetAstroId = planet.astroId,
+                PlanetName = planet.displayName,
+                StarName = star.displayName,
+                Item = item
+            };
+        }
+
+        private static void FilterSummaryDictionary(
+            Dictionary<int, CombinedLogisticsItem> source,
+            List<CombinedLogisticsItem> target,
+            StellogisticsConfig config,
+            int critPct,
+            int warnPct,
+            ref int filteredOutCount,
+            ref int critCount,
+            ref int warnCount)
+        {
+            foreach (CombinedLogisticsItem item in source.Values)
+            {
+                EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
+                if (!config.IsItemVisible(item.ItemId, item.Category) || config.IsItemExcludedByFill(item, status))
+                {
+                    filteredOutCount++;
+                    continue;
+                }
+                target.Add(item);
+                if (status == EHealthStatus.Critical) critCount++;
+                else if (status == EHealthStatus.Warning) warnCount++;
+            }
+        }
+
         private static void FinalizeSummary(
             LogisticsSummary summary,
             Dictionary<int, CombinedLogisticsItem> exportsByItem,
@@ -648,95 +748,44 @@ namespace Stellogistics
             int targetPlanetId,
             int targetStarId)
         {
-            int critPct = config.CriticalThresholdPercent.Value;
-            int warnPct = config.WarningThresholdPercent.Value;
-            int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
+            config.GetValidatedThresholds(out int critPct, out int warnPct);
             ESortOrder sortOrder = config.SortOrder.Value;
-            bool excludeFull = config.GetExclude100PercentForAstro(summary.GalaxySeed, summary.TargetAstroId);
+
+            FilterSummaryDictionary(
+                exportsByItem,
+                summary.Exports,
+                config,
+                critPct,
+                warnPct,
+                ref summary.FilteredOutItemCount,
+                ref summary.CriticalExportCount,
+                ref summary.WarningExportCount
+            );
+
+            FilterSummaryDictionary(
+                importsByItem,
+                summary.Imports,
+                config,
+                critPct,
+                warnPct,
+                ref summary.FilteredOutItemCount,
+                ref summary.CriticalImportCount,
+                ref summary.WarningImportCount
+            );
 
             Dictionary<int, SupplyAvailability> supplyByItem = null;
-
-            foreach (CombinedLogisticsItem item in exportsByItem.Values)
+            for (int i = 0; i < summary.Imports.Count; i++)
             {
-                bool isFullOrTapped = item.DisplayPercent >= excludeThresholdPct;
-                if (!config.IsItemVisibleForAstro(summary.GalaxySeed, summary.TargetAstroId, item.ItemId, item.Category) ||
-                    (excludeFull && isFullOrTapped))
-                {
-                    summary.FilteredOutItemCount++;
-                    continue;
-                }
-                summary.Exports.Add(item);
+                CombinedLogisticsItem item = summary.Imports[i];
                 EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
-                if (status == EHealthStatus.Critical) summary.CriticalExportCount++;
-                else if (status == EHealthStatus.Warning) summary.WarningExportCount++;
-            }
-
-            foreach (CombinedLogisticsItem item in importsByItem.Values)
-            {
-                bool isFullOrTapped = item.DisplayPercent >= excludeThresholdPct;
-                if (!config.IsItemVisibleForAstro(summary.GalaxySeed, summary.TargetAstroId, item.ItemId, item.Category) ||
-                    (excludeFull && isFullOrTapped))
-                {
-                    summary.FilteredOutItemCount++;
-                    continue;
-                }
-                summary.Imports.Add(item);
-                EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
-                if (status == EHealthStatus.Critical) summary.CriticalImportCount++;
-                else if (status == EHealthStatus.Warning) summary.WarningImportCount++;
-
                 if (status != EHealthStatus.Healthy && (item.FillRatio + item.InboundTransitRatio) < 0.85f)
                 {
-                    if (supplyByItem == null)
-                    {
-                        supplyByItem = new Dictionary<int, SupplyAvailability>();
-                        CollectGalaxySupplyAvailability(config, summary.GalaxySeed, critPct, warnPct, supplyByItem);
-                    }
+                    supplyByItem ??= GetOrCollectGalaxySupplyAvailability(config, summary.GalaxySeed, critPct, warnPct);
                     EvaluateImportBottleneck(item, status, supplyByItem, targetPlanetId, targetStarId);
                 }
             }
 
-            Comparison<CombinedLogisticsItem> comparer = (a, b) =>
-            {
-                if (sortOrder == ESortOrder.ShortageFirst)
-                {
-                    int pctCmp = a.DisplayPercent.CompareTo(b.DisplayPercent);
-                    if (pctCmp != 0)
-                    {
-                        return pctCmp;
-                    }
-                    int ratioCmp = a.FillRatio.CompareTo(b.FillRatio);
-                    if (ratioCmp != 0)
-                    {
-                        return ratioCmp;
-                    }
-                    int maxCmp = b.MaxCount.CompareTo(a.MaxCount);
-                    if (maxCmp != 0)
-                    {
-                        return maxCmp;
-                    }
-                }
-                else if (sortOrder == ESortOrder.StoredAmountDesc)
-                {
-                    int pctCmp = b.DisplayPercent.CompareTo(a.DisplayPercent);
-                    if (pctCmp != 0)
-                    {
-                        return pctCmp;
-                    }
-                    int ratioCmp = b.FillRatio.CompareTo(a.FillRatio);
-                    if (ratioCmp != 0)
-                    {
-                        return ratioCmp;
-                    }
-                    int amtCmp = b.StoredCount.CompareTo(a.StoredCount);
-                    if (amtCmp != 0)
-                    {
-                        return amtCmp;
-                    }
-                }
-                return a.ItemId.CompareTo(b.ItemId);
-            };
-
+            Comparison<CombinedLogisticsItem> comparer = (a, b) => CompareItems(a, b, sortOrder);
             summary.Exports.Sort(comparer);
             summary.Imports.Sort(comparer);
         }
@@ -745,358 +794,176 @@ namespace Stellogistics
         /// Populates <paramref name="result"/> with every item/building ID that has a slot, filter, or stored stack
         /// in any Logistics Station (ILS, PLS, Collector), Logistics Distributor, Storage Box, or Fluid Tank
         /// anywhere in the galaxy so unstored/unresearched items are not spoiled in the Custom Item Picker.
+        /// Uses a 5-second cache unless <paramref name="forceRefresh"/> is true.
         /// </summary>
-        public static void CollectStoredItemIds(HashSet<int> result)
+        public static void CollectStoredItemIds(HashSet<int> result, bool forceRefresh = false)
         {
-            result.Clear();
-            GameData data = GameMain.data;
-            if (data == null || data.factories == null)
+            int seed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
+            float now = Time.unscaledTime;
+
+            if (!forceRefresh && now < _storedIdsCacheExpiryTime && _storedIdsCachedSeed == seed)
             {
+                result.Clear();
+                result.UnionWith(_cachedStoredIds);
                 return;
             }
 
-            int factoryCount = Math.Min(data.factoryCount, data.factories.Length);
-            for (int f = 0; f < factoryCount; f++)
+            _cachedStoredIds.Clear();
+            _storedIdsCachedSeed = seed;
+            _storedIdsCacheExpiryTime = now + 5.0f;
+
+            GameData data = GameMain.data;
+            if (data?.factories != null)
             {
-                PlanetFactory factory = data.factories[f];
-                if (factory == null)
+                int factoryCount = Math.Min(data.factoryCount, data.factories.Length);
+                for (int f = 0; f < factoryCount; f++)
                 {
-                    continue;
-                }
-
-                PlanetTransport transport = factory.transport;
-                if (transport != null)
-                {
-                    StationComponent[] stationPool = transport.stationPool;
-                    if (stationPool != null)
-                    {
-                        int cursor = Math.Min(transport.stationCursor, stationPool.Length);
-                        for (int i = 1; i < cursor; i++)
-                        {
-                            StationComponent sc = stationPool[i];
-                            if (sc == null || sc.id != i || sc.storage == null)
-                            {
-                                continue;
-                            }
-                            for (int s = 0; s < sc.storage.Length; s++)
-                            {
-                                int itemId = sc.storage[s].itemId;
-                                if (itemId > 0)
-                                {
-                                    result.Add(itemId);
-                                }
-                            }
-                        }
-                    }
-
-                    DispenserComponent[] dispenserPool = transport.dispenserPool;
-                    if (dispenserPool != null)
-                    {
-                        int cursor = Math.Min(transport.dispenserCursor, dispenserPool.Length);
-                        for (int i = 1; i < cursor; i++)
-                        {
-                            DispenserComponent dc = dispenserPool[i];
-                            if (dc != null && dc.id == i && dc.filter > 0)
-                            {
-                                result.Add(dc.filter);
-                            }
-                        }
-                    }
-                }
-
-                FactoryStorage fs = factory.factoryStorage;
-                if (fs != null)
-                {
-                    StorageComponent[] storagePool = fs.storagePool;
-                    if (storagePool != null)
-                    {
-                        int cursor = Math.Min(fs.storageCursor, storagePool.Length);
-                        for (int i = 1; i < cursor; i++)
-                        {
-                            StorageComponent st = storagePool[i];
-                            if (st == null || st.id != i || st.grids == null)
-                            {
-                                continue;
-                            }
-                            for (int g = 0; g < st.grids.Length; g++)
-                            {
-                                int id = st.grids[g].itemId;
-                                if (id > 0)
-                                {
-                                    result.Add(id);
-                                }
-                                int filterId = st.grids[g].filter;
-                                if (filterId > 0)
-                                {
-                                    result.Add(filterId);
-                                }
-                            }
-                        }
-                    }
-
-                    TankComponent[] tankPool = fs.tankPool;
-                    if (tankPool != null)
-                    {
-                        int cursor = Math.Min(fs.tankCursor, tankPool.Length);
-                        for (int i = 1; i < cursor; i++)
-                        {
-                            TankComponent tk = tankPool[i];
-                            if (tk.id == i && tk.fluidId > 0)
-                            {
-                                result.Add(tk.fluidId);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        public static GalaxyItemSearchSummary SearchGalaxyForItem(int itemId, StellogisticsConfig config)
-        {
-            ItemProto proto = LDB.items?.Select(itemId);
-            var summary = new GalaxyItemSearchSummary
-            {
-                ItemId = itemId,
-                ItemName = proto != null ? proto.name : $"Item #{itemId}",
-                Icon = proto != null ? proto.iconSprite : null
-            };
-
-            if (itemId <= 0 || GameMain.galaxy == null || GameMain.galaxy.stars == null || GameMain.data == null)
-            {
-                return summary;
-            }
-
-            int galaxySeed = GameMain.galaxy.seed;
-            bool includeCollectors = config.IncludeOrbitalCollectors.Value;
-            int critPct = config.CriticalThresholdPercent.Value;
-            int warnPct = config.WarningThresholdPercent.Value;
-            int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
-            bool excludeFull = config.GetExclude100PercentForAstro(galaxySeed, 0);
-            ESortOrder sortOrder = config.SortOrder.Value;
-
-            StarData[] stars = GameMain.galaxy.stars;
-            for (int s = 0; s < stars.Length; s++)
-            {
-                StarData star = stars[s];
-                if (star == null || star.planets == null)
-                {
-                    continue;
-                }
-
-                for (int p = 0; p < star.planets.Length; p++)
-                {
-                    PlanetData planet = star.planets[p];
-                    StationComponent[] stationPool = planet?.factory?.transport?.stationPool;
-                    int stationCursor = planet?.factory?.transport != null ? planet.factory.transport.stationCursor : 0;
-                    if (stationPool == null || stationCursor <= 0)
+                    PlanetFactory factory = data.factories[f];
+                    if (factory == null)
                     {
                         continue;
                     }
 
-                    CombinedLogisticsItem expItem = null;
-                    CombinedLogisticsItem impItem = null;
-
-                    for (int i = 1; i < stationCursor; i++)
+                    PlanetTransport transport = factory.transport;
+                    if (transport != null)
                     {
-                        StationComponent station = stationPool[i];
-                        if (station == null || station.id != i || !station.isStellar || station.storage == null)
+                        StationComponent[] stationPool = transport.stationPool;
+                        if (stationPool != null)
                         {
-                            continue;
-                        }
-                        if (station.isCollector && !includeCollectors)
-                        {
-                            continue;
-                        }
-
-                        StationStore[] storage = station.storage;
-                        for (int k = 0; k < storage.Length; k++)
-                        {
-                            StationStore store = storage[k];
-                            if (store.itemId != itemId || store.remoteLogic == ELogisticStorage.None)
+                            int cursor = Math.Min(transport.stationCursor, stationPool.Length);
+                            for (int i = 1; i < cursor; i++)
                             {
-                                continue;
-                            }
-
-                            if (store.remoteLogic == ELogisticStorage.Supply)
-                            {
-                                if (expItem == null)
+                                StationComponent sc = stationPool[i];
+                                if (sc == null || sc.id != i || sc.storage == null)
                                 {
-                                    expItem = new CombinedLogisticsItem
+                                    continue;
+                                }
+                                for (int s = 0; s < sc.storage.Length; s++)
+                                {
+                                    int itemId = sc.storage[s].itemId;
+                                    if (itemId > 0)
                                     {
-                                        ItemId = itemId,
-                                        ItemName = summary.ItemName,
-                                        Icon = summary.Icon,
-                                        Category = CombinedLogisticsItem.ClassifyItem(proto),
-                                        Logic = ELogisticStorage.Supply,
-                                        PlanetCount = 1
-                                    };
-                                }
-                                expItem.StoredCount += store.count;
-                                expItem.MaxCount += store.max;
-                                expItem.InTransitOrder += store.remoteOrder;
-                                expItem.SlotCount++;
-                                if (station.isCollector)
-                                {
-                                    expItem.CollectorSlotCount++;
+                                        _cachedStoredIds.Add(itemId);
+                                    }
                                 }
                             }
-                            else if (store.remoteLogic == ELogisticStorage.Demand)
+                        }
+
+                        DispenserComponent[] dispenserPool = transport.dispenserPool;
+                        if (dispenserPool != null)
+                        {
+                            int cursor = Math.Min(transport.dispenserCursor, dispenserPool.Length);
+                            for (int i = 1; i < cursor; i++)
                             {
-                                if (impItem == null)
+                                DispenserComponent dc = dispenserPool[i];
+                                if (dc != null && dc.id == i && dc.filter > 0)
                                 {
-                                    impItem = new CombinedLogisticsItem
-                                    {
-                                        ItemId = itemId,
-                                        ItemName = summary.ItemName,
-                                        Icon = summary.Icon,
-                                        Category = CombinedLogisticsItem.ClassifyItem(proto),
-                                        Logic = ELogisticStorage.Demand,
-                                        PlanetCount = 1
-                                    };
-                                }
-                                impItem.StoredCount += store.count;
-                                impItem.MaxCount += store.max;
-                                impItem.InTransitOrder += store.remoteOrder;
-                                impItem.SlotCount++;
-                                if (station.isCollector)
-                                {
-                                    impItem.CollectorSlotCount++;
+                                    _cachedStoredIds.Add(dc.filter);
                                 }
                             }
                         }
                     }
 
-                    if (expItem != null && impItem != null)
+                    FactoryStorage fs = factory.factoryStorage;
+                    if (fs != null)
                     {
-                        expItem.IsHub = true;
-                        expItem.HubCounterpartStored = impItem.StoredCount;
-                        expItem.HubCounterpartMax = impItem.MaxCount;
-                        expItem.HubCounterpartSlots = impItem.SlotCount;
-
-                        impItem.IsHub = true;
-                        impItem.HubCounterpartStored = expItem.StoredCount;
-                        impItem.HubCounterpartMax = expItem.MaxCount;
-                        impItem.HubCounterpartSlots = expItem.SlotCount;
-                    }
-
-                    bool hasExp = expItem != null && !(excludeFull && expItem.DisplayPercent >= excludeThresholdPct);
-                    bool hasImp = impItem != null && !(excludeFull && impItem.DisplayPercent >= excludeThresholdPct);
-                    if ((hasExp || hasImp) && config.IsPlanetOrStarIgnored(galaxySeed, planet))
-                    {
-                        summary.IgnoredPlanetMatchCount++;
-                        continue;
-                    }
-
-                    if (hasExp)
-                    {
-                        summary.ExportingPlanets.Add(new PlanetItemLocationEntry
+                        StorageComponent[] storagePool = fs.storagePool;
+                        if (storagePool != null)
                         {
-                            Planet = planet,
-                            Star = star,
-                            PlanetId = planet.id,
-                            PlanetAstroId = planet.astroId,
-                            PlanetName = planet.displayName,
-                            StarName = star.displayName,
-                            Item = expItem
-                        });
-                        EHealthStatus status = expItem.GetHealthStatus(critPct, warnPct);
-                        if (status == EHealthStatus.Critical) summary.CriticalExportPlanetCount++;
-                        else if (status == EHealthStatus.Warning) summary.WarningExportPlanetCount++;
-                    }
+                            int cursor = Math.Min(fs.storageCursor, storagePool.Length);
+                            for (int i = 1; i < cursor; i++)
+                            {
+                                StorageComponent st = storagePool[i];
+                                if (st == null || st.id != i || st.grids == null)
+                                {
+                                    continue;
+                                }
+                                for (int g = 0; g < st.grids.Length; g++)
+                                {
+                                    int id = st.grids[g].itemId;
+                                    if (id > 0)
+                                    {
+                                        _cachedStoredIds.Add(id);
+                                    }
+                                    int filterId = st.grids[g].filter;
+                                    if (filterId > 0)
+                                    {
+                                        _cachedStoredIds.Add(filterId);
+                                    }
+                                }
+                            }
+                        }
 
-                    if (hasImp)
-                    {
-                        summary.ImportingPlanets.Add(new PlanetItemLocationEntry
+                        TankComponent[] tankPool = fs.tankPool;
+                        if (tankPool != null)
                         {
-                            Planet = planet,
-                            Star = star,
-                            PlanetId = planet.id,
-                            PlanetAstroId = planet.astroId,
-                            PlanetName = planet.displayName,
-                            StarName = star.displayName,
-                            Item = impItem
-                        });
-                        EHealthStatus status = impItem.GetHealthStatus(critPct, warnPct);
-                        if (status == EHealthStatus.Critical) summary.CriticalImportPlanetCount++;
-                        else if (status == EHealthStatus.Warning) summary.WarningImportPlanetCount++;
+                            int cursor = Math.Min(fs.tankCursor, tankPool.Length);
+                            for (int i = 1; i < cursor; i++)
+                            {
+                                TankComponent tk = tankPool[i];
+                                if (tk.id == i && tk.fluidId > 0)
+                                {
+                                    _cachedStoredIds.Add(tk.fluidId);
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            Comparison<PlanetItemLocationEntry> comparer = (a, b) =>
-            {
-                if (sortOrder == ESortOrder.ShortageFirst)
-                {
-                    int pctCmp = a.Item.DisplayPercent.CompareTo(b.Item.DisplayPercent);
-                    if (pctCmp != 0) return pctCmp;
-                    int ratioCmp = a.Item.FillRatio.CompareTo(b.Item.FillRatio);
-                    if (ratioCmp != 0) return ratioCmp;
-                    int maxCmp = b.Item.MaxCount.CompareTo(a.Item.MaxCount);
-                    if (maxCmp != 0) return maxCmp;
-                }
-                else if (sortOrder == ESortOrder.StoredAmountDesc)
-                {
-                    int pctCmp = b.Item.DisplayPercent.CompareTo(a.Item.DisplayPercent);
-                    if (pctCmp != 0) return pctCmp;
-                    int ratioCmp = b.Item.FillRatio.CompareTo(a.Item.FillRatio);
-                    if (ratioCmp != 0) return ratioCmp;
-                    int amtCmp = b.Item.StoredCount.CompareTo(a.Item.StoredCount);
-                    if (amtCmp != 0) return amtCmp;
-                }
-                return a.PlanetId.CompareTo(b.PlanetId);
-            };
-
-            summary.ExportingPlanets.Sort(comparer);
-            summary.ImportingPlanets.Sort(comparer);
-
-            return summary;
+            result.Clear();
+            result.UnionWith(_cachedStoredIds);
         }
 
-        public static GalaxyItemSearchSummary ScanGalaxyBottlenecks(StellogisticsConfig config)
-        {
-            return ScanGalaxyFinder(config);
-        }
-
-        public static GalaxyItemSearchSummary ScanGalaxyFinder(StellogisticsConfig config)
+        public static GalaxyItemSearchSummary ScanGalaxyFinder(StellogisticsConfig config, int focusItemId = 0)
         {
             int galaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
             var storedIds = new HashSet<int>();
             CollectStoredItemIds(storedIds);
 
+            int validStoredCount = 0;
             int checkedCount = 0;
             int singleItemId = -1;
             ItemProto singleProto = null;
 
-            foreach (int id in storedIds)
+            if (focusItemId > 0)
             {
-                ItemProto proto = LDB.items?.Select(id);
-                if (proto == null || proto.ID <= 0 || proto.GridIndex <= 0)
+                singleProto = LDB.items?.Select(focusItemId);
+                singleItemId = focusItemId;
+                checkedCount = 1;
+                validStoredCount = 1;
+            }
+            else
+            {
+                foreach (int id in storedIds)
                 {
-                    continue;
-                }
-                EItemCategoryFilter cat = CombinedLogisticsItem.ClassifyItem(proto);
-                if (config.IsItemVisibleForAstro(galaxySeed, 0, id, cat))
-                {
-                    checkedCount++;
-                    if (checkedCount == 1)
+                    ItemProto proto = LDB.items?.Select(id);
+                    if (proto == null || proto.ID <= 0 || proto.GridIndex <= 0)
                     {
-                        singleItemId = id;
-                        singleProto = proto;
+                        continue;
                     }
-                    else
+                    validStoredCount++;
+                    EItemCategoryFilter cat = CombinedLogisticsItem.ClassifyItem(proto);
+                    if (config.IsItemVisible(id, cat))
                     {
-                        singleItemId = -1;
-                        singleProto = null;
+                        checkedCount++;
+                        if (checkedCount == 1)
+                        {
+                            singleItemId = id;
+                            singleProto = proto;
+                        }
+                        else
+                        {
+                            singleItemId = -1;
+                            singleProto = null;
+                        }
                     }
                 }
             }
 
             bool includeCollectors = config.IncludeOrbitalCollectors.Value;
-            int critPct = config.CriticalThresholdPercent.Value;
-            int warnPct = config.WarningThresholdPercent.Value;
-            int excludeThresholdPct = UnityEngine.Mathf.Clamp(config.ExcludeFullThresholdPercent.Value, 40, 100);
-            bool excludeFull = config.GetExclude100PercentForAstro(galaxySeed, 0);
-            bool onlyBottlenecks = excludeFull && excludeThresholdPct <= warnPct + 1;
+            config.GetValidatedThresholds(out int critPct, out int warnPct);
+            bool onlyBottlenecks = config.ExcludeEnabled && config.ExcludeMode == EExcludeMode.Healthy;
             ESortOrder sortOrder = config.SortOrder.Value;
 
             string summaryTitle;
@@ -1110,11 +977,11 @@ namespace Stellogistics
             }
             else if (onlyBottlenecks)
             {
-                summaryTitle = checkedCount < storedIds.Count ? $"Bottlenecks ({checkedCount} Items)" : "Bottlenecks";
+                summaryTitle = checkedCount < validStoredCount ? $"Bottlenecks ({checkedCount} Items)" : "Bottlenecks";
             }
             else
             {
-                summaryTitle = checkedCount < storedIds.Count ? $"{checkedCount} Items" : "All Items";
+                summaryTitle = checkedCount < validStoredCount ? $"{checkedCount} Items" : "All Items";
             }
 
             var summary = new GalaxyItemSearchSummary
@@ -1126,7 +993,7 @@ namespace Stellogistics
                 Icon = singleProto != null ? singleProto.iconSprite : null
             };
 
-            if (checkedCount == 0 || GameMain.galaxy == null || GameMain.galaxy.stars == null || GameMain.data == null)
+            if (checkedCount == 0 || GameMain.galaxy?.stars == null || GameMain.data == null)
             {
                 return summary;
             }
@@ -1135,135 +1002,86 @@ namespace Stellogistics
             var importsByItem = new Dictionary<int, CombinedLogisticsItem>();
             var supplyByItem = new Dictionary<int, SupplyAvailability>();
 
-            StarData[] stars = GameMain.galaxy.stars;
-            for (int s = 0; s < stars.Length; s++)
+            ForEachLogisticsPlanet((star, planet, _, __) =>
             {
-                StarData star = stars[s];
-                if (star == null || star.planets == null)
+                exportsByItem.Clear();
+                importsByItem.Clear();
+                StationTotals dummy = default;
+
+                AggregatePlanetStations(
+                    planet,
+                    star.id,
+                    includeCollectors,
+                    EStarFilterMode.AllRemoteSlots,
+                    null,
+                    exportsByItem,
+                    importsByItem,
+                    null,
+                    null,
+                    ref dummy
+                );
+
+                LinkHubItems(exportsByItem, importsByItem);
+
+                bool isIgnored = config.IsPlanetOrStarIgnored(galaxySeed, planet);
+                bool hadMatchOnPlanet = false;
+
+                foreach (CombinedLogisticsItem expItem in exportsByItem.Values)
                 {
-                    continue;
+                    if (!isIgnored)
+                    {
+                        importsByItem.TryGetValue(expItem.ItemId, out CombinedLogisticsItem impOnSame);
+                        RecordPlanetSupplyAvailability(supplyByItem, planet.id, star.id, expItem, impOnSame, critPct, warnPct);
+                    }
                 }
 
-                for (int p = 0; p < star.planets.Length; p++)
+                CollectFinderMatchesForPlanet(
+                    exportsByItem,
+                    summary.ExportingPlanets,
+                    planet,
+                    star,
+                    config,
+                    focusItemId,
+                    critPct,
+                    warnPct,
+                    isIgnored,
+                    ref hadMatchOnPlanet,
+                    ref summary.CriticalExportPlanetCount,
+                    ref summary.WarningExportPlanetCount
+                );
+
+                CollectFinderMatchesForPlanet(
+                    importsByItem,
+                    summary.ImportingPlanets,
+                    planet,
+                    star,
+                    config,
+                    focusItemId,
+                    critPct,
+                    warnPct,
+                    isIgnored,
+                    ref hadMatchOnPlanet,
+                    ref summary.CriticalImportPlanetCount,
+                    ref summary.WarningImportPlanetCount
+                );
+
+                if (hadMatchOnPlanet)
                 {
-                    PlanetData planet = star.planets[p];
-                    StationComponent[] stationPool = planet?.factory?.transport?.stationPool;
-                    int stationCursor = planet?.factory?.transport != null ? planet.factory.transport.stationCursor : 0;
-                    if (stationPool == null || stationCursor <= 0)
-                    {
-                        continue;
-                    }
-
-                    exportsByItem.Clear();
-                    importsByItem.Clear();
-                    int dummyIls = 0, dummyCol = 0, dummyWarp = 0, dummyIdle = 0, dummyWork = 0;
-
-                    AggregatePlanetStations(
-                        planet,
-                        star.id,
-                        includeCollectors,
-                        EStarFilterMode.AllRemoteSlots,
-                        null,
-                        exportsByItem,
-                        importsByItem,
-                        null,
-                        null,
-                        ref dummyIls,
-                        ref dummyCol,
-                        ref dummyWarp,
-                        ref dummyIdle,
-                        ref dummyWork
-                    );
-
-                    LinkHubItems(exportsByItem, importsByItem);
-
-                    bool isIgnored = config.IsPlanetOrStarIgnored(galaxySeed, planet);
-                    bool hadMatchOnPlanet = false;
-
-                    foreach (CombinedLogisticsItem expItem in exportsByItem.Values)
-                    {
-                        if (!isIgnored)
-                        {
-                            importsByItem.TryGetValue(expItem.ItemId, out CombinedLogisticsItem impOnSame);
-                            RecordPlanetSupplyAvailability(supplyByItem, planet.id, star.id, expItem, impOnSame, critPct, warnPct);
-                        }
-
-                        if (!config.IsItemVisibleForAstro(galaxySeed, 0, expItem.ItemId, expItem.Category))
-                        {
-                            continue;
-                        }
-
-                        EHealthStatus status = expItem.GetHealthStatus(critPct, warnPct);
-                        if (onlyBottlenecks)
-                        {
-                            if (status == EHealthStatus.Healthy) continue;
-                        }
-                        else if (excludeFull && expItem.DisplayPercent >= excludeThresholdPct)
-                        {
-                            continue;
-                        }
-
-                        if (isIgnored)
-                        {
-                            hadMatchOnPlanet = true;
-                            continue;
-                        }
-                        summary.ExportingPlanets.Add(new PlanetItemLocationEntry
-                        {
-                            Planet = planet,
-                            Star = star,
-                            PlanetId = planet.id,
-                            PlanetAstroId = planet.astroId,
-                            PlanetName = planet.displayName,
-                            StarName = star.displayName,
-                            Item = expItem
-                        });
-                        if (status == EHealthStatus.Critical) summary.CriticalExportPlanetCount++;
-                        else if (status == EHealthStatus.Warning) summary.WarningExportPlanetCount++;
-                    }
-
-                    foreach (CombinedLogisticsItem impItem in importsByItem.Values)
-                    {
-                        if (!config.IsItemVisibleForAstro(galaxySeed, 0, impItem.ItemId, impItem.Category))
-                        {
-                            continue;
-                        }
-
-                        EHealthStatus status = impItem.GetHealthStatus(critPct, warnPct);
-                        if (onlyBottlenecks)
-                        {
-                            if (status == EHealthStatus.Healthy) continue;
-                        }
-                        else if (excludeFull && impItem.DisplayPercent >= excludeThresholdPct)
-                        {
-                            continue;
-                        }
-
-                        if (isIgnored)
-                        {
-                            hadMatchOnPlanet = true;
-                            continue;
-                        }
-                        summary.ImportingPlanets.Add(new PlanetItemLocationEntry
-                        {
-                            Planet = planet,
-                            Star = star,
-                            PlanetId = planet.id,
-                            PlanetAstroId = planet.astroId,
-                            PlanetName = planet.displayName,
-                            StarName = star.displayName,
-                            Item = impItem
-                        });
-                        if (status == EHealthStatus.Critical) summary.CriticalImportPlanetCount++;
-                        else if (status == EHealthStatus.Warning) summary.WarningImportPlanetCount++;
-                    }
-
-                    if (hadMatchOnPlanet)
-                    {
-                        summary.IgnoredPlanetMatchCount++;
-                    }
+                    summary.IgnoredPlanetMatchCount++;
                 }
+            });
+
+            // Share the fresh supply snapshot with the 1s cache
+            _cachedSupplyAvailability.Clear();
+            foreach (KeyValuePair<int, SupplyAvailability> kvp in supplyByItem)
+            {
+                _cachedSupplyAvailability[kvp.Key] = kvp.Value;
             }
+            _supplyCachedSeed = galaxySeed;
+            _supplyCachedIncludeOc = includeCollectors;
+            _supplyCachedCritPct = critPct;
+            _supplyCachedWarnPct = warnPct;
+            _supplyCacheExpiryTime = Time.unscaledTime + 1.0f;
 
             for (int i = 0; i < summary.ImportingPlanets.Count; i++)
             {
@@ -1273,41 +1091,59 @@ namespace Stellogistics
                 EvaluateImportBottleneck(impEntry.Item, status, supplyByItem, impEntry.PlanetId, starId);
             }
 
-            Comparison<PlanetItemLocationEntry> comparer = (a, b) =>
-            {
-                if (sortOrder == ESortOrder.ShortageFirst)
-                {
-                    int pctCmp = a.Item.DisplayPercent.CompareTo(b.Item.DisplayPercent);
-                    if (pctCmp != 0) return pctCmp;
-                    int ratioCmp = a.Item.FillRatio.CompareTo(b.Item.FillRatio);
-                    if (ratioCmp != 0) return ratioCmp;
-                    int maxCmp = b.Item.MaxCount.CompareTo(a.Item.MaxCount);
-                    if (maxCmp != 0) return maxCmp;
-                }
-                else if (sortOrder == ESortOrder.StoredAmountDesc)
-                {
-                    int pctCmp = b.Item.DisplayPercent.CompareTo(a.Item.DisplayPercent);
-                    if (pctCmp != 0) return pctCmp;
-                    int ratioCmp = b.Item.FillRatio.CompareTo(a.Item.FillRatio);
-                    if (ratioCmp != 0) return ratioCmp;
-                    int amtCmp = b.Item.StoredCount.CompareTo(a.Item.StoredCount);
-                    if (amtCmp != 0) return amtCmp;
-                }
-                int idCmp = a.Item.ItemId.CompareTo(b.Item.ItemId);
-                if (idCmp != 0) return idCmp;
-                return a.PlanetId.CompareTo(b.PlanetId);
-            };
-
+            Comparison<PlanetItemLocationEntry> comparer = (a, b) => CompareLocationEntries(a, b, sortOrder);
             summary.ExportingPlanets.Sort(comparer);
             summary.ImportingPlanets.Sort(comparer);
 
             return summary;
         }
 
+        private static void CollectFinderMatchesForPlanet(
+            Dictionary<int, CombinedLogisticsItem> source,
+            List<PlanetItemLocationEntry> target,
+            PlanetData planet,
+            StarData star,
+            StellogisticsConfig config,
+            int focusItemId,
+            int critPct,
+            int warnPct,
+            bool isIgnored,
+            ref bool hadMatchOnPlanet,
+            ref int critCount,
+            ref int warnCount)
+        {
+            foreach (CombinedLogisticsItem item in source.Values)
+            {
+                bool matchesItem = focusItemId > 0
+                    ? item.ItemId == focusItemId
+                    : config.IsItemVisible(item.ItemId, item.Category);
+                if (!matchesItem)
+                {
+                    continue;
+                }
+
+                EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
+                if (config.IsItemExcludedByFill(item, status))
+                {
+                    continue;
+                }
+
+                if (isIgnored)
+                {
+                    hadMatchOnPlanet = true;
+                    continue;
+                }
+
+                target.Add(MakeLocationEntry(planet, star, item));
+                if (status == EHealthStatus.Critical) critCount++;
+                else if (status == EHealthStatus.Warning) warnCount++;
+            }
+        }
+
         public static void CollectLogisticsPlanetsAndStars(StellogisticsConfig config, List<PlanetLogisticsFilterEntry> outEntries)
         {
             outEntries.Clear();
-            if (GameMain.galaxy == null || GameMain.galaxy.stars == null)
+            if (GameMain.galaxy?.stars == null)
             {
                 return;
             }
@@ -1320,7 +1156,7 @@ namespace Stellogistics
             for (int s = 0; s < stars.Length; s++)
             {
                 StarData star = stars[s];
-                if (star == null || star.planets == null)
+                if (star?.planets == null)
                 {
                     continue;
                 }
@@ -1339,11 +1175,12 @@ namespace Stellogistics
 
                     int ilsCount = 0;
                     int collectorCount = 0;
-                    StationComponent[] stationPool = planet.factory?.transport?.stationPool;
-                    int stationCursor = planet.factory?.transport != null ? planet.factory.transport.stationCursor : 0;
-                    if (stationPool != null && stationCursor > 0)
+                    PlanetTransport transport = planet.factory?.transport;
+                    StationComponent[] stationPool = transport?.stationPool;
+                    if (stationPool != null && transport.stationCursor > 0)
                     {
-                        for (int i = 1; i < stationCursor; i++)
+                        int cursor = Math.Min(transport.stationCursor, stationPool.Length);
+                        for (int i = 1; i < cursor; i++)
                         {
                             StationComponent station = stationPool[i];
                             if (station == null || station.id != i || !station.isStellar)

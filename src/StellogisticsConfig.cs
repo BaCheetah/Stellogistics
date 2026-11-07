@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using BepInEx.Configuration;
+using UnityEngine;
 
 namespace Stellogistics
 {
@@ -25,6 +26,13 @@ namespace Stellogistics
         Medium = 1,
         Slow = 2,
         Paused = 3
+    }
+
+    public enum EExcludeMode
+    {
+        Tapped90 = 0, // Exclude >= 90%
+        Full100 = 1,  // Exclude 100%
+        Healthy = 2   // Exclude Healthy (> WarningThreshold)
     }
 
     [Flags]
@@ -72,13 +80,15 @@ namespace Stellogistics
         public ConfigEntry<string> SavedAstroItemOverrides { get; }
         public ConfigEntry<string> SavedIgnoredAstros { get; }
 
-        private readonly Dictionary<string, EItemCategoryFilter> _astroFilterCache = new Dictionary<string, EItemCategoryFilter>();
-        private readonly Dictionary<string, HashSet<int>> _astroItemOverridesCache = new Dictionary<string, HashSet<int>>();
+        private EItemCategoryFilter _categoryMask;
+        private readonly HashSet<int> _hiddenItems = new HashSet<int>();
+        private bool _hiddenItemsInitialized;
         private readonly Dictionary<int, HashSet<int>> _ignoredAstrosBySeed = new Dictionary<int, HashSet<int>>();
 
         public StellogisticsConfig(ConfigFile config)
         {
             _configFile = config;
+            _configFile.SaveOnConfigSet = false;
 
             EnableMod = config.Bind(
                 "General",
@@ -164,7 +174,7 @@ namespace Stellogistics
                 "ExcludeFullThresholdPercent",
                 90,
                 new ConfigDescription(
-                    "Storage fullness percentage at or above which an item is excluded when the Exclude Full filter is enabled (90 = excludes 90%–100% including freshly tapped storages; 100 = only 100%; 41 = excludes all green >40% entries).",
+                    "Storage fullness percentage at or above which an item is excluded when the Exclude Full filter is enabled (90 = excludes >=90% including freshly tapped storages; 100 = only 100%; 41 = excludes all green Healthy entries).",
                     new AcceptableValueRange<int>(40, 100)
                 )
             );
@@ -185,7 +195,7 @@ namespace Stellogistics
                 DefaultMaxHeight,
                 new ConfigDescription(
                     "Maximum height of the scrollable list area in pixels.",
-                    new AcceptableValueRange<float>(56f, 950f)
+                    new AcceptableValueRange<float>(82f, 950f)
                 )
             );
 
@@ -214,21 +224,21 @@ namespace Stellogistics
                 "Filters",
                 "DefaultCategoryFilter",
                 EItemCategoryFilter.All,
-                "Default item category filter for planets and star systems that do not have a custom per-body filter saved."
+                "Global item category filter mask."
             );
 
             SavedAstroFilters = config.Bind(
                 "Filters",
                 "SavedAstroFilters",
                 "",
-                "Serialized per-star and per-planet item category filters (format: seed_astroId:mask,...)."
+                "Serialized global item category filter (legacy format: global:mask)."
             );
 
             SavedAstroItemOverrides = config.Bind(
                 "Filters",
                 "SavedAstroItemOverrides",
                 "",
-                "Serialized per-star and per-planet individual item filter overrides (format: seed_astroId:id1|id2,...)."
+                "Serialized individual hidden item IDs (format: global:id1|id2)."
             );
 
             SavedIgnoredAstros = config.Bind(
@@ -238,153 +248,164 @@ namespace Stellogistics
                 "Serialized per-galaxy ignored planet and star system astroIds for the Finder (format: seed:astroId1|astroId2,...)."
             );
 
-            ParseSavedAstroFilters();
-            ParseSavedAstroItemOverrides();
+            ParseSavedFilterState();
             ParseSavedIgnoredAstros();
+        }
+
+        public void Save()
+        {
+            _configFile.Save();
+        }
+
+        public void GetValidatedThresholds(out int critPct, out int warnPct)
+        {
+            critPct = Mathf.Clamp(CriticalThresholdPercent.Value, 1, 50);
+            warnPct = Mathf.Clamp(WarningThresholdPercent.Value, critPct + 1, 85);
+        }
+
+        public EExcludeMode ExcludeMode
+        {
+            get
+            {
+                int val = ExcludeFullThresholdPercent.Value;
+                if (val >= 100) return EExcludeMode.Full100;
+                if (val >= 90) return EExcludeMode.Tapped90;
+                return EExcludeMode.Healthy;
+            }
+            set
+            {
+                ExcludeFullThresholdPercent.Value = value switch
+                {
+                    EExcludeMode.Full100 => 100,
+                    EExcludeMode.Tapped90 => 90,
+                    _ => 41
+                };
+            }
+        }
+
+        public bool IsItemExcludedByFill(CombinedLogisticsItem item, EHealthStatus status)
+        {
+            if (!ExcludeEnabled)
+            {
+                return false;
+            }
+            return ExcludeMode switch
+            {
+                EExcludeMode.Full100 => item.DisplayPercent >= 100,
+                EExcludeMode.Tapped90 => item.DisplayPercent >= 90,
+                _ => status == EHealthStatus.Healthy
+            };
         }
 
         private const string GlobalFilterKey = "global";
 
-        private static string MakeAstroKey(int galaxySeed, int astroId)
+        private void ParseSavedFilterState()
         {
-            return GlobalFilterKey;
-        }
+            _categoryMask = DefaultCategoryFilter.Value & (EItemCategoryFilter.All | EItemCategoryFilter.Exclude100Percent);
 
-        private void ParseSavedAstroFilters()
-        {
-            _astroFilterCache.Clear();
-            string raw = SavedAstroFilters.Value;
-            if (string.IsNullOrEmpty(raw))
+            string rawFilter = SavedAstroFilters.Value;
+            if (!string.IsNullOrEmpty(rawFilter))
             {
-                return;
-            }
-
-            string[] entries = raw.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < entries.Length; i++)
-            {
-                string[] kv = entries[i].Split(':');
-                if (kv.Length == 2 && int.TryParse(kv[1], out int maskInt))
+                string[] entries = rawFilter.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < entries.Length; i++)
                 {
-                    _astroFilterCache[kv[0].Trim()] = (EItemCategoryFilter)(maskInt & (int)(EItemCategoryFilter.All | EItemCategoryFilter.Exclude100Percent));
-                }
-            }
-        }
-
-        private void FlushSavedAstroFilters()
-        {
-            var sb = new StringBuilder();
-            foreach (KeyValuePair<string, EItemCategoryFilter> kvp in _astroFilterCache)
-            {
-                if (sb.Length > 0)
-                {
-                    sb.Append(',');
-                }
-                sb.Append(kvp.Key).Append(':').Append((int)kvp.Value);
-            }
-            SavedAstroFilters.Value = sb.ToString();
-            _configFile.Save();
-        }
-
-        private void ParseSavedAstroItemOverrides()
-        {
-            _astroItemOverridesCache.Clear();
-            string raw = SavedAstroItemOverrides.Value;
-            if (string.IsNullOrEmpty(raw))
-            {
-                return;
-            }
-
-            string[] entries = raw.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < entries.Length; i++)
-            {
-                string[] kv = entries[i].Split(':');
-                if (kv.Length == 2)
-                {
-                    string key = kv[0].Trim();
-                    string[] itemStrs = kv[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-                    var set = new HashSet<int>();
-                    for (int j = 0; j < itemStrs.Length; j++)
+                    string[] kv = entries[i].Split(':');
+                    if (kv.Length == 2 && kv[0].Trim() == GlobalFilterKey && int.TryParse(kv[1], out int maskInt))
                     {
-                        if (int.TryParse(itemStrs[j], out int id) && id > 0)
+                        _categoryMask = (EItemCategoryFilter)(maskInt & (int)(EItemCategoryFilter.All | EItemCategoryFilter.Exclude100Percent));
+                        break;
+                    }
+                }
+            }
+
+            _hiddenItems.Clear();
+            _hiddenItemsInitialized = false;
+            string rawOverrides = SavedAstroItemOverrides.Value;
+            if (!string.IsNullOrEmpty(rawOverrides))
+            {
+                string[] entries = rawOverrides.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < entries.Length; i++)
+                {
+                    string[] kv = entries[i].Split(':');
+                    if (kv.Length == 2 && kv[0].Trim() == GlobalFilterKey)
+                    {
+                        string[] itemStrs = kv[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        for (int j = 0; j < itemStrs.Length; j++)
                         {
-                            set.Add(id);
+                            if (int.TryParse(itemStrs[j], out int id) && id > 0)
+                            {
+                                _hiddenItems.Add(id);
+                            }
                         }
-                    }
-                    if (set.Count > 0)
-                    {
-                        _astroItemOverridesCache[key] = set;
+                        if (_hiddenItems.Count > 0)
+                        {
+                            _hiddenItemsInitialized = true;
+                        }
+                        break;
                     }
                 }
             }
         }
 
-        private void FlushSavedAstroItemOverrides()
+        private void FlushFilterAndSave()
         {
-            var sb = new StringBuilder();
-            foreach (KeyValuePair<string, HashSet<int>> kvp in _astroItemOverridesCache)
+            DefaultCategoryFilter.Value = _categoryMask;
+            SavedAstroFilters.Value = $"{GlobalFilterKey}:{(int)_categoryMask}";
+
+            if (_hiddenItems.Count == 0)
             {
-                if (kvp.Value == null || kvp.Value.Count == 0)
-                {
-                    continue;
-                }
-                if (sb.Length > 0)
-                {
-                    sb.Append(',');
-                }
-                sb.Append(kvp.Key).Append(':');
+                SavedAstroItemOverrides.Value = "";
+            }
+            else
+            {
+                var sb = new StringBuilder();
+                sb.Append(GlobalFilterKey).Append(':');
                 bool first = true;
-                foreach (int id in kvp.Value)
+                foreach (int id in _hiddenItems)
                 {
                     if (!first) sb.Append('|');
                     sb.Append(id);
                     first = false;
                 }
+                SavedAstroItemOverrides.Value = sb.ToString();
             }
-            SavedAstroItemOverrides.Value = sb.ToString();
+
             _configFile.Save();
         }
 
-        public EItemCategoryFilter GetFilterForAstro(int galaxySeed, int astroId)
+        public EItemCategoryFilter CategoryFilter => _categoryMask;
+
+        public bool ExcludeEnabled => (_categoryMask & EItemCategoryFilter.Exclude100Percent) != 0;
+
+        public void ToggleExcludeEnabled()
         {
-            if (_astroFilterCache.TryGetValue(GlobalFilterKey, out EItemCategoryFilter mask))
+            _categoryMask = ExcludeEnabled
+                ? (_categoryMask & ~EItemCategoryFilter.Exclude100Percent)
+                : (_categoryMask | EItemCategoryFilter.Exclude100Percent);
+            FlushFilterAndSave();
+        }
+
+        public void CycleExcludeMode()
+        {
+            ExcludeMode = ExcludeMode switch
             {
-                return mask;
-            }
-            return DefaultCategoryFilter.Value;
+                EExcludeMode.Tapped90 => EExcludeMode.Full100,
+                EExcludeMode.Full100 => EExcludeMode.Healthy,
+                _ => EExcludeMode.Tapped90
+            };
+            _categoryMask |= EItemCategoryFilter.Exclude100Percent;
+            FlushFilterAndSave();
         }
 
-        public bool GetExclude100PercentForAstro(int galaxySeed, int astroId)
-        {
-            return (GetFilterForAstro(galaxySeed, astroId) & EItemCategoryFilter.Exclude100Percent) != 0;
-        }
+        public bool HasCustomFilter => _categoryMask != EItemCategoryFilter.All || _hiddenItems.Count > 0;
 
-        public void ToggleExclude100PercentForAstro(int galaxySeed, int astroId)
+        private HashSet<int> EnsureHiddenItemsSet()
         {
-            EItemCategoryFilter current = GetFilterForAstro(galaxySeed, astroId);
-            EItemCategoryFilter updated = (current & EItemCategoryFilter.Exclude100Percent) != 0
-                ? (current & ~EItemCategoryFilter.Exclude100Percent)
-                : (current | EItemCategoryFilter.Exclude100Percent);
-
-            _astroFilterCache[GlobalFilterKey] = updated;
-            DefaultCategoryFilter.Value = updated;
-            FlushSavedAstroFilters();
-        }
-
-        public bool HasCustomFilterForAstro(int galaxySeed, int astroId)
-        {
-            EItemCategoryFilter mask = GetFilterForAstro(galaxySeed, astroId);
-            bool hasNonDefaultMask = mask != EItemCategoryFilter.All;
-            bool hasItemOverrides = _astroItemOverridesCache.TryGetValue(GlobalFilterKey, out HashSet<int> set) && set.Count > 0;
-            return hasNonDefaultMask || hasItemOverrides;
-        }
-
-        private HashSet<int> GetOrInitHiddenItemsSet(int galaxySeed, int astroId)
-        {
-            if (!_astroItemOverridesCache.TryGetValue(GlobalFilterKey, out HashSet<int> hiddenItems))
+            if (!_hiddenItemsInitialized)
             {
-                hiddenItems = new HashSet<int>();
-                EItemCategoryFilter catMask = GetFilterForAstro(galaxySeed, astroId) & EItemCategoryFilter.All;
-                if (catMask != EItemCategoryFilter.All && LDB.items != null && LDB.items.dataArray != null)
+                _hiddenItems.Clear();
+                EItemCategoryFilter catMask = _categoryMask & EItemCategoryFilter.All;
+                if (catMask != EItemCategoryFilter.All && LDB.items?.dataArray != null)
                 {
                     ItemProto[] allProtos = LDB.items.dataArray;
                     for (int i = 0; i < allProtos.Length; i++)
@@ -397,24 +418,22 @@ namespace Stellogistics
                         EItemCategoryFilter itemCat = CombinedLogisticsItem.ClassifyItem(proto);
                         if ((catMask & itemCat) == 0)
                         {
-                            hiddenItems.Add(proto.ID);
+                            _hiddenItems.Add(proto.ID);
                         }
                     }
                 }
-                _astroItemOverridesCache[GlobalFilterKey] = hiddenItems;
+                _hiddenItemsInitialized = true;
             }
-            return hiddenItems;
+            return _hiddenItems;
         }
 
-        public void SetFilterForAstro(int galaxySeed, int astroId, EItemCategoryFilter mask, EItemCategoryFilter? toggledCategories = null)
+        public void SetCategoryFilter(EItemCategoryFilter mask, EItemCategoryFilter? toggledCategories = null)
         {
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
-            EItemCategoryFilter existingExclude100 = GetFilterForAstro(galaxySeed, astroId) & EItemCategoryFilter.Exclude100Percent;
-            EItemCategoryFilter clampedMask = (mask & EItemCategoryFilter.All) | existingExclude100;
-            _astroFilterCache[GlobalFilterKey] = clampedMask;
-            DefaultCategoryFilter.Value = clampedMask;
+            HashSet<int> hiddenItems = EnsureHiddenItemsSet();
+            EItemCategoryFilter existingExclude = _categoryMask & EItemCategoryFilter.Exclude100Percent;
+            _categoryMask = (mask & EItemCategoryFilter.All) | existingExclude;
 
-            if (toggledCategories.HasValue && LDB.items != null && LDB.items.dataArray != null)
+            if (toggledCategories.HasValue && LDB.items?.dataArray != null)
             {
                 EItemCategoryFilter changedCats = toggledCategories.Value;
                 ItemProto[] allProtos = LDB.items.dataArray;
@@ -428,7 +447,7 @@ namespace Stellogistics
                     EItemCategoryFilter itemCat = CombinedLogisticsItem.ClassifyItem(proto);
                     if ((changedCats & itemCat) != 0)
                     {
-                        if ((clampedMask & itemCat) != 0)
+                        if ((_categoryMask & itemCat) != 0)
                         {
                             hiddenItems.Remove(proto.ID);
                         }
@@ -440,18 +459,17 @@ namespace Stellogistics
                 }
             }
 
-            FlushSavedAstroItemOverrides();
-            FlushSavedAstroFilters();
+            FlushFilterAndSave();
         }
 
-        public void SetCustomItemsAllVisible(int galaxySeed, int astroId, bool visible)
+        public void SetCustomItemsAllVisible(bool visible)
         {
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             if (visible)
             {
                 hiddenItems.Clear();
             }
-            else if (LDB.items != null && LDB.items.dataArray != null)
+            else if (LDB.items?.dataArray != null)
             {
                 ItemProto[] allProtos = LDB.items.dataArray;
                 for (int i = 0; i < allProtos.Length; i++)
@@ -463,99 +481,51 @@ namespace Stellogistics
                     }
                 }
             }
-            FlushSavedAstroItemOverrides();
+            FlushFilterAndSave();
         }
 
-        public void CopyHiddenItemsSnapshot(int galaxySeed, int astroId, HashSet<int> destination)
+        public void ResetFilter()
         {
-            if (destination == null)
-            {
-                return;
-            }
-            destination.Clear();
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
-            destination.UnionWith(hiddenItems);
+            _categoryMask = EItemCategoryFilter.All;
+            _hiddenItems.Clear();
+            _hiddenItemsInitialized = false;
+            FlushFilterAndSave();
         }
 
-        public void RestoreHiddenItemsSnapshot(int galaxySeed, int astroId, HashSet<int> snapshot)
+        public bool IsItemVisible(int itemId, EItemCategoryFilter itemCategory)
         {
-            if (snapshot == null)
+            if (_hiddenItemsInitialized)
             {
-                return;
+                return !_hiddenItems.Contains(itemId);
             }
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
-            hiddenItems.Clear();
-            hiddenItems.UnionWith(snapshot);
-            FlushSavedAstroItemOverrides();
+            return (_categoryMask & itemCategory) != 0;
         }
 
-        public void SetCustomSingleItemOnly(int galaxySeed, int astroId, int itemId)
+        public void ToggleItemOverride(int itemId)
         {
             if (itemId <= 0)
             {
                 return;
             }
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
-            hiddenItems.Clear();
-            if (LDB.items != null && LDB.items.dataArray != null)
-            {
-                ItemProto[] allProtos = LDB.items.dataArray;
-                for (int i = 0; i < allProtos.Length; i++)
-                {
-                    ItemProto proto = allProtos[i];
-                    if (proto != null && proto.ID > 0 && proto.ID != itemId)
-                    {
-                        hiddenItems.Add(proto.ID);
-                    }
-                }
-            }
-            FlushSavedAstroItemOverrides();
-        }
-
-        public void ResetFilterForAstro(int galaxySeed, int astroId)
-        {
-            DefaultCategoryFilter.Value = EItemCategoryFilter.All;
-            _astroFilterCache.Clear();
-            _astroItemOverridesCache.Clear();
-            FlushSavedAstroFilters();
-            FlushSavedAstroItemOverrides();
-        }
-
-        public bool IsItemVisibleForAstro(int galaxySeed, int astroId, int itemId, EItemCategoryFilter itemCategory)
-        {
-            if (_astroItemOverridesCache.TryGetValue(GlobalFilterKey, out HashSet<int> hiddenItems))
-            {
-                return !hiddenItems.Contains(itemId);
-            }
-            EItemCategoryFilter catMask = GetFilterForAstro(galaxySeed, astroId);
-            return (catMask & itemCategory) != 0;
-        }
-
-        public void ToggleItemOverrideForAstro(int galaxySeed, int astroId, int itemId)
-        {
-            if (itemId <= 0)
-            {
-                return;
-            }
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             if (!hiddenItems.Remove(itemId))
             {
                 hiddenItems.Add(itemId);
             }
-            FlushSavedAstroItemOverrides();
+            FlushFilterAndSave();
         }
 
-        public void SetItemVisibleForAstro(int galaxySeed, int astroId, int itemId, bool visible)
+        public void SetItemVisible(int itemId, bool visible)
         {
             if (itemId <= 0)
             {
                 return;
             }
-            HashSet<int> hiddenItems = GetOrInitHiddenItemsSet(galaxySeed, astroId);
+            HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             bool changed = visible ? hiddenItems.Remove(itemId) : hiddenItems.Add(itemId);
             if (changed)
             {
-                FlushSavedAstroItemOverrides();
+                FlushFilterAndSave();
             }
         }
 

@@ -57,7 +57,7 @@ namespace Stellogistics
             UIStarmapLogisticsPanel panel = EnsurePanel(__instance);
             if (panel != null)
             {
-                panel.RequestImmediateRefresh();
+                panel.OnStarmapOpened();
                 panel.OnStarmapUpdate(__instance);
             }
         }
@@ -138,38 +138,6 @@ namespace Stellogistics
             if (IsPointerOverPanel())
             {
                 __result = 0f;
-            }
-        }
-
-        private static bool _zoomBlockedThisFrame;
-        private static double _savedDistWanted;
-        private static float _savedFovWanted;
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(StarmapCamera), nameof(StarmapCamera.CameraControl))]
-        public static void StarmapCamera_CameraControl_Prefix(StarmapCamera __instance)
-        {
-            if (IsPointerOverPanel())
-            {
-                VFInput.inScrollView = true;
-                _zoomBlockedThisFrame = true;
-                _savedDistWanted = __instance.distWanted;
-                _savedFovWanted = __instance.fovWanted;
-            }
-            else
-            {
-                _zoomBlockedThisFrame = false;
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StarmapCamera), nameof(StarmapCamera.CameraControl))]
-        public static void StarmapCamera_CameraControl_Postfix(StarmapCamera __instance)
-        {
-            if (_zoomBlockedThisFrame)
-            {
-                __instance.distWanted = _savedDistWanted;
-                __instance.fovWanted = _savedFovWanted;
             }
         }
     }

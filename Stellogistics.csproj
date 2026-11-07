@@ -12,7 +12,6 @@
       https://nuget.bepinex.dev/v3/index.json
     </RestoreAdditionalProjectSources>
     <RootNamespace>Stellogistics</RootNamespace>
-    <ThunderstoreProfilePluginsDir>E:\Thunderstore Data\DysonSphereProgram\profiles\Default\BepInEx\plugins\FlorianSchlieper-Stellogistics</ThunderstoreProfilePluginsDir>
   </PropertyGroup>
 
   <ItemGroup>
