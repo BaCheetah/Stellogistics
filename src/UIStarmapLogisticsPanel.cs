@@ -352,14 +352,17 @@ namespace Stellogistics
         private static readonly Color RowOddBgColor = new Color(0.065f, 0.10f, 0.15f, 0.78f);
 
         private static readonly Color CriticalColor = new Color(1.0f, 0.34f, 0.34f, 1f);
-        private static readonly Color CriticalFillColor = new Color(0.85f, 0.18f, 0.18f, 0.24f);
-        private static readonly Color CriticalTransitColor = new Color(1.0f, 0.42f, 0.42f, 0.38f);
+        private static readonly Color CriticalTextColor = new Color(1.0f, 0.66f, 0.66f, 1f);
+        private static readonly Color CriticalFillColor = new Color(0.80f, 0.16f, 0.18f, 0.24f);
+        private static readonly Color CriticalTransitColor = new Color(0.72f, 0.18f, 0.22f, 0.22f);
         private static readonly Color WarningColor = new Color(1.0f, 0.70f, 0.24f, 1f);
-        private static readonly Color WarningFillColor = new Color(0.85f, 0.52f, 0.12f, 0.22f);
-        private static readonly Color WarningTransitColor = new Color(1.0f, 0.72f, 0.28f, 0.36f);
+        private static readonly Color WarningTextColor = new Color(1.0f, 0.85f, 0.48f, 1f);
+        private static readonly Color WarningFillColor = new Color(0.80f, 0.48f, 0.10f, 0.22f);
+        private static readonly Color WarningTransitColor = new Color(0.72f, 0.44f, 0.10f, 0.20f);
         private static readonly Color HealthyColor = new Color(0.30f, 0.90f, 0.58f, 1f);
-        private static readonly Color HealthyFillColor = new Color(0.18f, 0.68f, 0.42f, 0.18f);
-        private static readonly Color HealthyTransitColor = new Color(0.32f, 0.92f, 0.62f, 0.34f);
+        private static readonly Color HealthySubTextColor = new Color(0.82f, 0.97f, 0.89f, 0.98f);
+        private static readonly Color HealthyFillColor = new Color(0.16f, 0.62f, 0.38f, 0.20f);
+        private static readonly Color HealthyTransitColor = new Color(0.16f, 0.58f, 0.38f, 0.19f);
 
         private const float HeaderHeight = 76f;
         private const float StackedHeaderHeight = 100f;
@@ -418,7 +421,7 @@ namespace Stellogistics
                 {
                     // Diagonal 45-degree stripes (period 8px: 4px bright stripe, 4px soft gap)
                     int diag = (x + y) & 7;
-                    float alpha = diag < 4 ? 1.0f : 0.22f;
+                    float alpha = diag < 4 ? 1.0f : 0.12f;
                     pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
@@ -2176,24 +2179,28 @@ namespace Stellogistics
             nameText.rectTransform.anchorMax = new Vector2(0.64f, 1f);
             nameText.rectTransform.offsetMin = new Vector2(44f, 0f);
             nameText.rectTransform.offsetMax = new Vector2(-4f, -1f);
+            AddRowTextShadow(nameText);
 
-            Text metaText = CreateText("MetaText", rowRect, 10, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.62f, 0.76f, 0.88f, 0.95f));
+            Text metaText = CreateText("MetaText", rowRect, 10, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.68f, 0.82f, 0.94f, 0.98f));
             metaText.rectTransform.anchorMin = new Vector2(0f, 0f);
             metaText.rectTransform.anchorMax = new Vector2(0.64f, 0.5f);
             metaText.rectTransform.offsetMin = new Vector2(44f, 1f);
             metaText.rectTransform.offsetMax = new Vector2(-4f, 0f);
+            AddRowTextShadow(metaText);
 
             Text amountText = CreateText("AmountText", rowRect, 12, FontStyle.Bold, TextAnchor.MiddleRight, Color.white);
             amountText.rectTransform.anchorMin = new Vector2(0.55f, 0.5f);
             amountText.rectTransform.anchorMax = new Vector2(1f, 1f);
             amountText.rectTransform.offsetMin = new Vector2(0f, 0f);
             amountText.rectTransform.offsetMax = new Vector2(-10f, -1f);
+            AddRowTextShadow(amountText);
 
             Text subStatusText = CreateText("SubStatusText", rowRect, 10, FontStyle.Normal, TextAnchor.MiddleRight, new Color(0.7f, 0.82f, 0.92f, 1f));
             subStatusText.rectTransform.anchorMin = new Vector2(0.55f, 0f);
             subStatusText.rectTransform.anchorMax = new Vector2(1f, 0.5f);
             subStatusText.rectTransform.offsetMin = new Vector2(0f, 1f);
             subStatusText.rectTransform.offsetMax = new Vector2(-10f, 0f);
+            AddRowTextShadow(subStatusText);
 
             // Hover-revealed [✕] button on Finder rows with slide-in animation
             GameObject muteBtnGo = new GameObject("MutePlanetBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(PointerHoverTracker), typeof(ItemCellHoverHandler));
@@ -2316,15 +2323,26 @@ namespace Stellogistics
 
                 bool muteDirectHover = row.MuteHoverTracker != null && row.MuteHoverTracker.IsHovered;
                 Color bgCol = muteDirectHover
-                    ? new Color(0.48f, 0.15f, 0.20f, 0.92f * eased)
-                    : new Color(0.14f, 0.22f, 0.32f, 0.72f * eased);
+                    ? new Color(0.54f, 0.16f, 0.22f, 0.95f * eased)
+                    : new Color(0.06f, 0.10f, 0.16f, 0.86f * eased);
                 Color txtCol = muteDirectHover
-                    ? new Color(1f, 0.84f, 0.86f, 1f * eased)
-                    : new Color(0.76f, 0.88f, 0.98f, 0.90f * eased);
+                    ? new Color(1f, 0.86f, 0.88f, 1f * eased)
+                    : new Color(0.86f, 0.94f, 1f, 0.95f * eased);
 
                 row.MuteBtnBg.color = bgCol;
                 row.MuteBtnText.color = txtCol;
             }
+        }
+
+        private static void AddRowTextShadow(Text txt)
+        {
+            if (txt == null)
+            {
+                return;
+            }
+            Shadow shadow = txt.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.01f, 0.03f, 0.06f, 0.88f);
+            shadow.effectDistance = new Vector2(1f, -1f);
         }
 
         private Text CreateText(string name, RectTransform parent, int fontSize, FontStyle style, TextAnchor align, Color color)
@@ -3117,22 +3135,26 @@ namespace Stellogistics
             EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
 
             Color accentColor;
+            Color statusTextColor;
             Color fillColor;
             Color transitColor;
             switch (status)
             {
                 case EHealthStatus.Critical:
                     accentColor = CriticalColor;
+                    statusTextColor = CriticalTextColor;
                     fillColor = CriticalFillColor;
                     transitColor = CriticalTransitColor;
                     break;
                 case EHealthStatus.Warning:
                     accentColor = WarningColor;
+                    statusTextColor = WarningTextColor;
                     fillColor = WarningFillColor;
                     transitColor = WarningTransitColor;
                     break;
                 default:
                     accentColor = HealthyColor;
+                    statusTextColor = HealthySubTextColor;
                     fillColor = HealthyFillColor;
                     transitColor = HealthyTransitColor;
                     break;
@@ -3208,8 +3230,8 @@ namespace Stellogistics
             string maxStr = CombinedLogisticsItem.FormatAmount(item.MaxCount);
             row.AmountText.text = $"{storedStr} / {maxStr}";
             row.AmountText.color = status == EHealthStatus.Healthy
-                ? new Color(0.92f, 0.99f, 0.94f, 1f)
-                : accentColor;
+                ? new Color(0.95f, 1.0f, 0.97f, 1f)
+                : statusTextColor;
 
             int pct = item.DisplayPercent;
             string statusTag = "";
@@ -3236,9 +3258,7 @@ namespace Stellogistics
             }
 
             row.SubStatusText.text = $"{bottleneckPrefix}{statusTag}{pct}%{transitStr}";
-            row.SubStatusText.color = status == EHealthStatus.Healthy
-                ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
-                : accentColor;
+            row.SubStatusText.color = statusTextColor;
 
             int capturedItemId = item.ItemId;
             row.ShowMuteOnHover = true;
@@ -3512,22 +3532,26 @@ namespace Stellogistics
             EHealthStatus status = item.GetHealthStatus(critPct, warnPct);
 
             Color accentColor;
+            Color statusTextColor;
             Color fillColor;
             Color transitColor;
             switch (status)
             {
                 case EHealthStatus.Critical:
                     accentColor = CriticalColor;
+                    statusTextColor = CriticalTextColor;
                     fillColor = CriticalFillColor;
                     transitColor = CriticalTransitColor;
                     break;
                 case EHealthStatus.Warning:
                     accentColor = WarningColor;
+                    statusTextColor = WarningTextColor;
                     fillColor = WarningFillColor;
                     transitColor = WarningTransitColor;
                     break;
                 default:
                     accentColor = HealthyColor;
+                    statusTextColor = HealthySubTextColor;
                     fillColor = HealthyFillColor;
                     transitColor = HealthyTransitColor;
                     break;
@@ -3610,8 +3634,8 @@ namespace Stellogistics
             string maxStr = CombinedLogisticsItem.FormatAmount(item.MaxCount);
             row.AmountText.text = $"{storedStr} / {maxStr}";
             row.AmountText.color = status == EHealthStatus.Healthy
-                ? new Color(0.92f, 0.99f, 0.94f, 1f)
-                : accentColor;
+                ? new Color(0.95f, 1.0f, 0.97f, 1f)
+                : statusTextColor;
 
             int pct = item.DisplayPercent;
             string statusTag = "";
@@ -3638,9 +3662,7 @@ namespace Stellogistics
             }
 
             row.SubStatusText.text = $"{bottleneckPrefix}{statusTag}{pct}%{transitStr}";
-            row.SubStatusText.color = status == EHealthStatus.Healthy
-                ? new Color(0.62f, 0.82f, 0.72f, 0.95f)
-                : accentColor;
+            row.SubStatusText.color = statusTextColor;
 
             row.ShowMuteOnHover = true;
             ApplyRowMuteAnimationState(row);
