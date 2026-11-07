@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.1.4
+- Disable auto-save per resize frame, make Finder single-item focus transient, add `EExcludeMode` & TTL caches, remove dead code, and split `UIStarmapLogisticsPanel` into partial classes.
+
 ## 2.1.3
 - **Hover-Animated `✕` Item-Hide Button**:
   - Clicking `✕` on any row (both in the Galaxy Finder and in the Planet / Star System overview) now unchecks that specific item in the Picker instead of ignoring the entire planet.
