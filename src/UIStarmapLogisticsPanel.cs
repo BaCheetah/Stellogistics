@@ -501,7 +501,11 @@ namespace Stellogistics
 
             PanelDragHandler dragHandler = headerGo.GetComponent<PanelDragHandler>();
             dragHandler.TargetRect = _panelRect;
-            dragHandler.OnDragStarted = () => _config.UseCustomPosition.Value = true;
+            dragHandler.OnDragStarted = () =>
+            {
+                _config.UseCustomPosition.Value = true;
+                CloseDropdownMenus();
+            };
             dragHandler.OnDragFinished = pos =>
             {
                 _config.SaveCustomPanelPosition(pos.x, pos.y);
@@ -715,6 +719,7 @@ namespace Stellogistics
             resizeHandler.OnResizeStarted = () =>
             {
                 _isResizing = true;
+                CloseDropdownMenus();
             };
             resizeHandler.OnResizing = (newW, newTotalH) =>
             {
@@ -1779,6 +1784,8 @@ namespace Stellogistics
                 return;
             }
 
+            CloseDropdownMenus();
+
             if (_customPickerOpen)
             {
                 _customPickerOpen = false;
@@ -2262,24 +2269,79 @@ namespace Stellogistics
             return txt;
         }
 
+        public void CloseDropdownMenus()
+        {
+            if (_optionsMenuOpen)
+            {
+                _optionsMenuOpen = false;
+                if (_optionsMenuGo != null) _optionsMenuGo.SetActive(false);
+                if (_optionsBtnText != null) _optionsBtnText.text = "Filter ▾";
+            }
+            if (_generalOptionsMenuOpen)
+            {
+                _generalOptionsMenuOpen = false;
+                if (_generalOptionsMenuGo != null) _generalOptionsMenuGo.SetActive(false);
+                if (_generalOptionsBtnText != null) _generalOptionsBtnText.text = "Options ▾";
+            }
+        }
+
+        private void CheckAutoCloseDropdownMenus()
+        {
+            if (!_optionsMenuOpen && !_generalOptionsMenuOpen)
+            {
+                return;
+            }
+
+            EventSystem es = EventSystem.current;
+            if (es == null)
+            {
+                return;
+            }
+
+            GameObject sel = es.currentSelectedGameObject;
+            if (_optionsMenuOpen && _optionsMenuRect != null && _optionsBtn != null)
+            {
+                bool isMenuOrBtnSelected = sel != null &&
+                    (sel == _optionsBtn.gameObject || sel.transform.IsChildOf(_optionsMenuRect));
+                if (!isMenuOrBtnSelected)
+                {
+                    if (_optionsHoverTracker != null && _optionsHoverTracker.IsHovered)
+                    {
+                        es.SetSelectedGameObject(_optionsBtn.gameObject);
+                    }
+                    else
+                    {
+                        CloseDropdownMenus();
+                        return;
+                    }
+                }
+            }
+
+            if (_generalOptionsMenuOpen && _generalOptionsMenuRect != null && _generalOptionsBtn != null)
+            {
+                bool isMenuOrBtnSelected = sel != null &&
+                    (sel == _generalOptionsBtn.gameObject || sel.transform.IsChildOf(_generalOptionsMenuRect));
+                if (!isMenuOrBtnSelected)
+                {
+                    if (_generalOptionsHoverTracker != null && _generalOptionsHoverTracker.IsHovered)
+                    {
+                        es.SetSelectedGameObject(_generalOptionsBtn.gameObject);
+                    }
+                    else
+                    {
+                        CloseDropdownMenus();
+                    }
+                }
+            }
+        }
+
         private void OnTogglePanelCollapseClicked()
         {
+            CloseDropdownMenus();
             _panelCollapsed = !_panelCollapsed;
             _panelCollapseBtnText.text = _panelCollapsed ? "▶" : "▼";
             if (_panelCollapsed)
             {
-                if (_optionsMenuOpen)
-                {
-                    _optionsMenuOpen = false;
-                    _optionsMenuGo.SetActive(false);
-                    _optionsBtnText.text = "Filter ▾";
-                }
-                if (_generalOptionsMenuOpen && _generalOptionsMenuGo != null)
-                {
-                    _generalOptionsMenuOpen = false;
-                    _generalOptionsMenuGo.SetActive(false);
-                    _generalOptionsBtnText.text = "Options ▾";
-                }
                 if (_customPickerOpen && _customPickerGo != null)
                 {
                     _customPickerOpen = false;
@@ -2291,18 +2353,21 @@ namespace Stellogistics
 
         private void OnToggleExportsCollapseClicked()
         {
+            CloseDropdownMenus();
             _exportsCollapsed = !_exportsCollapsed;
             _forceRefresh = true;
         }
 
         private void OnToggleImportsCollapseClicked()
         {
+            CloseDropdownMenus();
             _importsCollapsed = !_importsCollapsed;
             _forceRefresh = true;
         }
 
         private void OnFilterModeButtonClicked()
         {
+            CloseDropdownMenus();
             if (_finderModeActive)
             {
                 ToggleCustomItemPicker();
@@ -2340,6 +2405,7 @@ namespace Stellogistics
 
         private void OnFinderModeButtonClicked()
         {
+            CloseDropdownMenus();
             if (_finderModeActive)
             {
                 if (_hasSavedFinderSnapshot || _lastFinderCheckedCount == 1)
@@ -2367,26 +2433,10 @@ namespace Stellogistics
                 _panelCollapsed = false;
                 _panelCollapseBtnText.text = "▼";
             }
-            if (_optionsMenuOpen)
-            {
-                _optionsMenuOpen = false;
-                _optionsMenuGo.SetActive(false);
-                _optionsBtnText.text = "Filter ▾";
-            }
-            if (_generalOptionsMenuOpen)
-            {
-                _generalOptionsMenuOpen = false;
-                _generalOptionsMenuGo.SetActive(false);
-                _generalOptionsBtnText.text = "Options ▾";
-            }
 
-            // Activate Finder view and open the unified Picker if not already open
+            // Activate Finder view without auto-opening the item picker
             _finderModeActive = true;
-            if (!_customPickerOpen)
-            {
-                ToggleCustomItemPicker();
-            }
-            else
+            if (_customPickerOpen)
             {
                 SetCustomPickerTab(_customPickerActiveTab);
             }
@@ -2395,6 +2445,7 @@ namespace Stellogistics
 
         private void OnSortModeButtonClicked()
         {
+            CloseDropdownMenus();
             int next = ((int)_config.SortOrder.Value + 1) % 3;
             _config.SortOrder.Value = (ESortOrder)next;
             _forceRefresh = true;
@@ -2418,6 +2469,7 @@ namespace Stellogistics
             _optionsBtnText.text = _optionsMenuOpen ? "Filter ▴" : "Filter ▾";
             if (_optionsMenuOpen)
             {
+                EventSystem.current?.SetSelectedGameObject(_optionsBtn.gameObject);
                 _optionsMenuRect.SetAsLastSibling();
                 RefreshOptionsMenuState();
             }
@@ -2441,6 +2493,7 @@ namespace Stellogistics
             _generalOptionsBtnText.text = _generalOptionsMenuOpen ? "Options ▴" : "Options ▾";
             if (_generalOptionsMenuOpen)
             {
+                EventSystem.current?.SetSelectedGameObject(_generalOptionsBtn.gameObject);
                 _generalOptionsMenuRect.SetAsLastSibling();
                 RefreshGeneralOptionsMenuState();
             }
@@ -2624,6 +2677,7 @@ namespace Stellogistics
             }
 
             UpdatePanelPosition();
+            CheckAutoCloseDropdownMenus();
 
             if (IsPointerOverUI())
             {
@@ -3120,6 +3174,7 @@ namespace Stellogistics
             row.OnMuteClick = null;
             row.OnRowClick = () =>
             {
+                CloseDropdownMenus();
                 if (capturedItemId > 0)
                 {
                     if (!_hasSavedFinderSnapshot)
@@ -3514,6 +3569,7 @@ namespace Stellogistics
             int capturedItemId = item.ItemId;
             row.OnRowClick = () =>
             {
+                CloseDropdownMenus();
                 // When clicking a row in the multi-item Finder Overview, also offer focusing that single item or returning to overview
                 if (isBottleneckScan && capturedItemId > 0)
                 {
@@ -3538,6 +3594,7 @@ namespace Stellogistics
             };
             row.OnMuteClick = () =>
             {
+                CloseDropdownMenus();
                 if (capturedItemId > 0)
                 {
                     if (_hasSavedFinderSnapshot)
