@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.1
+- **Fixed Taskbar Tab Drag-to-Collapse Flicker**: Prevented `ApplyHeaderLayout` from transiently applying the expanded/stacked header height while dragging the resize grip in or above the collapsed Taskbar Tab state.
+
 ## 2.0.0
 - **Galaxy Item & Bottleneck Finder (`Finder`)**:
   - Locate every planet across the entire star cluster that exports or imports any selected item(s), or scan for all active bottlenecks (`! ≤40% Only`) in one view.

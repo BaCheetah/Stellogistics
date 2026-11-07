@@ -712,9 +712,9 @@ namespace Stellogistics
             };
             resizeHandler.OnResizing = (newW, newTotalH) =>
             {
-                bool showFifthBtn = _finderModeActive || (_lastResolvedStar != null && _lastResolvedPlanet == null);
-                float activeHeaderH = ApplyHeaderLayout(newW, showFifthBtn);
-                float desiredViewportH = newTotalH - activeHeaderH;
+                // Use stable base HeaderHeight (74f) for vertical collapse thresholds so crossing the horizontal
+                // width threshold (385px) never causes a 22px vertical hysteresis oscillation!
+                float desiredViewportH = newTotalH - HeaderHeight;
 
                 // Stage 1: Dragged high up into the header -> collapse whole panel into Tabbed Mode
                 if (desiredViewportH <= 10f)
@@ -742,6 +742,21 @@ namespace Stellogistics
                         }
                         _forceRefresh = true;
                     }
+                    // Immediately apply collapsed tab geometry so it never flashes a half-collapsed state between frames
+                    _titleText.text = "Stellogistics";
+                    _titleText.alignment = TextAnchor.MiddleCenter;
+                    _titleText.rectTransform.anchoredPosition = new Vector2(30f, -6f);
+                    _titleText.rectTransform.sizeDelta = new Vector2(-36f, 20f);
+                    _subtitleText.gameObject.SetActive(false);
+                    _fleetInfoText.gameObject.SetActive(false);
+                    _filterModeBtn.gameObject.SetActive(false);
+                    _finderModeBtn.gameObject.SetActive(false);
+                    _sortModeBtn.gameObject.SetActive(false);
+                    _optionsBtn.gameObject.SetActive(false);
+                    _generalOptionsBtn.gameObject.SetActive(false);
+                    _scrollRect.gameObject.SetActive(false);
+                    _headerRect.sizeDelta = new Vector2(0f, CollapsedTabHeight);
+                    _panelRect.sizeDelta = new Vector2(CollapsedTabWidth, CollapsedTabHeight);
                     return;
                 }
 
@@ -786,7 +801,8 @@ namespace Stellogistics
                 }
 
                 _config.PanelWidth.Value = newW;
-                float clampedViewportH = Mathf.Clamp(desiredViewportH, 82f, 950f);
+                float activeHeaderH = newW < StackedHeaderWidthThreshold ? StackedHeaderHeight : HeaderHeight;
+                float clampedViewportH = Mathf.Clamp(newTotalH - activeHeaderH, 82f, 950f);
                 _config.PanelMaxHeight.Value = clampedViewportH;
                 ApplyCurrentLayoutSizes(newW, clampedViewportH);
             };
@@ -801,6 +817,10 @@ namespace Stellogistics
 
         private float ApplyHeaderLayout(float panelWidth, bool showFifthButton)
         {
+            if (_panelCollapsed)
+            {
+                return CollapsedTabHeight;
+            }
             bool stacked = panelWidth < StackedHeaderWidthThreshold;
             float currentHeaderH = stacked ? StackedHeaderHeight : HeaderHeight;
 
