@@ -48,7 +48,7 @@ namespace Stellogistics
 
             _customPickerTitleText = CreateText("PickerTitle", headerRect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
             _customPickerTitleText.rectTransform.Stretch(new Vector2(10f, 0f), new Vector2(-34f, 0f));
-            _customPickerTitleText.text = "ITEM, BUILDING & PLANET PICKER (Click to toggle)";
+            _customPickerTitleText.text = ModLocalization.PickerWindowTitle;
 
             Button closeBtn = CreateHeaderButton("BtnClosePicker", headerRect, new Vector2(-4f, -3f), new Vector2(22f, 22f), true, out Text closeTxt);
             closeTxt.text = "✕";
@@ -59,20 +59,20 @@ namespace Stellogistics
             });
 
             // Tabs row
-            Button tabItemsBtn = CreateHeaderButton("TabItems", _customPickerRect, new Vector2(10f, -36f), new Vector2(68f, 24f), false, out Text tabItemsTxt);
-            tabItemsTxt.text = "Items";
-            tabItemsTxt.fontSize = 11;
+            Button tabItemsBtn = CreateHeaderButton("TabItems", _customPickerRect, new Vector2(10f, -36f), new Vector2(68f, 24f), false, out _customTabItemsText);
+            _customTabItemsText.text = ModLocalization.TabItems;
+            _customTabItemsText.fontSize = 11;
             _customTabItemsBg = tabItemsBtn.GetComponent<Image>();
             tabItemsBtn.onClick.AddListener(() => SetCustomPickerTab(1));
 
-            Button tabBldgsBtn = CreateHeaderButton("TabBuildings", _customPickerRect, new Vector2(82f, -36f), new Vector2(76f, 24f), false, out Text tabBldgsTxt);
-            tabBldgsTxt.text = "Buildings";
-            tabBldgsTxt.fontSize = 11;
+            Button tabBldgsBtn = CreateHeaderButton("TabBuildings", _customPickerRect, new Vector2(82f, -36f), new Vector2(76f, 24f), false, out _customTabBuildingsText);
+            _customTabBuildingsText.text = ModLocalization.TabBuildings;
+            _customTabBuildingsText.fontSize = 11;
             _customTabBuildingsBg = tabBldgsBtn.GetComponent<Image>();
             tabBldgsBtn.onClick.AddListener(() => SetCustomPickerTab(2));
 
             Button tabPlanetsBtn = CreateHeaderButton("TabPlanets", _customPickerRect, new Vector2(162f, -36f), new Vector2(78f, 24f), false, out _customTabPlanetsText);
-            _customTabPlanetsText.text = "Planets";
+            _customTabPlanetsText.text = ModLocalization.TabPlanets(0);
             _customTabPlanetsText.fontSize = 11;
             _customTabPlanetsBg = tabPlanetsBtn.GetComponent<Image>();
             tabPlanetsBtn.onClick.AddListener(() => SetCustomPickerTab(3));
@@ -82,9 +82,9 @@ namespace Stellogistics
             sepRect.SetRect(new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0.5f, 1f), new Vector2(248f, -36f), new Vector2(1f, 24f));
 
             // Bulk action buttons
-            _pickerCheckAllBtn = CreateHeaderButton("PickerCheckAll", _customPickerRect, new Vector2(254f, -36f), new Vector2(74f, 24f), false, out Text pickerCheckAllTxt);
-            pickerCheckAllTxt.text = "✓ Check All";
-            pickerCheckAllTxt.color = new Color(0.86f, 1f, 0.92f, 1f);
+            _pickerCheckAllBtn = CreateHeaderButton("PickerCheckAll", _customPickerRect, new Vector2(254f, -36f), new Vector2(74f, 24f), false, out _pickerCheckAllText);
+            _pickerCheckAllText.text = ModLocalization.BtnCheckAll;
+            _pickerCheckAllText.color = new Color(0.86f, 1f, 0.92f, 1f);
             _pickerCheckAllBtn.GetComponent<Image>().color = new Color(0.11f, 0.30f, 0.23f, 0.96f);
             Outline checkOutline = _pickerCheckAllBtn.GetComponent<Outline>();
             if (checkOutline != null) checkOutline.effectColor = new Color(0.26f, 0.72f, 0.54f, 0.70f);
@@ -97,9 +97,9 @@ namespace Stellogistics
                 _forceRefresh = true;
             });
 
-            _pickerUncheckAllBtn = CreateHeaderButton("PickerUncheckAll", _customPickerRect, new Vector2(332f, -36f), new Vector2(82f, 24f), false, out Text pickerUncheckAllTxt);
-            pickerUncheckAllTxt.text = "✕ Uncheck All";
-            pickerUncheckAllTxt.color = new Color(1f, 0.88f, 0.90f, 1f);
+            _pickerUncheckAllBtn = CreateHeaderButton("PickerUncheckAll", _customPickerRect, new Vector2(332f, -36f), new Vector2(82f, 24f), false, out _pickerUncheckAllText);
+            _pickerUncheckAllText.text = ModLocalization.BtnUncheckAll;
+            _pickerUncheckAllText.color = new Color(1f, 0.88f, 0.90f, 1f);
             _pickerUncheckAllBtn.GetComponent<Image>().color = new Color(0.30f, 0.14f, 0.18f, 0.96f);
             Outline uncheckOutline = _pickerUncheckAllBtn.GetComponent<Outline>();
             if (uncheckOutline != null) uncheckOutline.effectColor = new Color(0.78f, 0.34f, 0.40f, 0.70f);
@@ -112,9 +112,9 @@ namespace Stellogistics
                 _forceRefresh = true;
             });
 
-            _pickerShowAllPlanetsBtn = CreateHeaderButton("PickerShowAllPlanets", _customPickerRect, new Vector2(256f, -36f), new Vector2(124f, 24f), false, out Text pickerShowAllPlanetsTxt);
-            pickerShowAllPlanetsTxt.text = "✓ Show All Planets";
-            pickerShowAllPlanetsTxt.color = new Color(0.86f, 1f, 0.92f, 1f);
+            _pickerShowAllPlanetsBtn = CreateHeaderButton("PickerShowAllPlanets", _customPickerRect, new Vector2(256f, -36f), new Vector2(124f, 24f), false, out _pickerShowAllPlanetsText);
+            _pickerShowAllPlanetsText.text = ModLocalization.BtnShowAllPlanets;
+            _pickerShowAllPlanetsText.color = new Color(0.86f, 1f, 0.92f, 1f);
             _pickerShowAllPlanetsBtn.GetComponent<Image>().color = new Color(0.11f, 0.30f, 0.23f, 0.96f);
             Outline showAllPlanetsOutline = _pickerShowAllPlanetsBtn.GetComponent<Outline>();
             if (showAllPlanetsOutline != null) showAllPlanetsOutline.effectColor = new Color(0.26f, 0.72f, 0.54f, 0.70f);
@@ -134,7 +134,7 @@ namespace Stellogistics
             _customPickerHoveredLabel.resizeTextForBestFit = true;
             _customPickerHoveredLabel.resizeTextMinSize = 9;
             _customPickerHoveredLabel.resizeTextMaxSize = 11;
-            _customPickerHoveredLabel.text = "Bright = Shown • Dimmed = Hidden";
+            _customPickerHoveredLabel.text = ModLocalization.PickerHoverDefaultItems;
 
             // Grid container
             Image gridBg = UIHelpers.CreateImage("GridContainer", _customPickerRect, new Color(0.04f, 0.06f, 0.09f, 0.90f), false, out RectTransform gridRect);
@@ -194,26 +194,7 @@ namespace Stellogistics
                     cellOutline.effectColor = new Color(0.28f, 0.50f, 0.74f, 0.40f);
                     cellOutline.effectDistance = new Vector2(1f, -1f);
 
-                    Button btn = cellGo.GetComponent<Button>();
-                    UIHelpers.ApplyButtonTint(btn, new Color(1.32f, 1.38f, 1.48f, 1f), new Color(0.80f, 0.86f, 0.94f, 1f));
-                    btn.onClick.AddListener(() => OnCustomPickerItemClicked(itemId, itemName, itemCategory));
-
-                    ItemCellHoverHandler hover = cellGo.GetComponent<ItemCellHoverHandler>();
-                    hover.OnHoverEnter = () =>
-                    {
-                        if (_customPickerHoveredLabel == null) return;
-                        bool vis = _config.IsItemVisible(itemId, itemCategory);
-                        _customPickerHoveredLabel.text = vis ? $"{itemName} (Shown)" : $"{itemName} (Hidden)";
-                        _customPickerHoveredLabel.color = vis ? HealthyColor : WarningColor;
-                    };
-                    hover.OnHoverExit = () =>
-                    {
-                        if (_customPickerHoveredLabel == null) return;
-                        _customPickerHoveredLabel.text = "Bright = Shown • Dimmed = Hidden";
-                        _customPickerHoveredLabel.color = new Color(0.80f, 0.92f, 1f, 1f);
-                    };
-
-                    _customPickerCells.Add(new CustomPickerCell
+                    var cellView = new CustomPickerCell
                     {
                         ItemId = itemId,
                         TabIndex = tab,
@@ -223,7 +204,28 @@ namespace Stellogistics
                         BgImage = cellBg,
                         IconImage = iconImg,
                         CellOutline = cellOutline
-                    });
+                    };
+
+                    Button btn = cellGo.GetComponent<Button>();
+                    UIHelpers.ApplyButtonTint(btn, new Color(1.32f, 1.38f, 1.48f, 1f), new Color(0.80f, 0.86f, 0.94f, 1f));
+                    btn.onClick.AddListener(() => OnCustomPickerItemClicked(cellView.ItemId, cellView.ItemName, cellView.Category));
+
+                    ItemCellHoverHandler hover = cellGo.GetComponent<ItemCellHoverHandler>();
+                    hover.OnHoverEnter = () =>
+                    {
+                        if (_customPickerHoveredLabel == null) return;
+                        bool vis = _config.IsItemVisible(cellView.ItemId, cellView.Category);
+                        _customPickerHoveredLabel.text = ModLocalization.PickerHoveredItemStatus(cellView.ItemName, vis);
+                        _customPickerHoveredLabel.color = vis ? HealthyColor : WarningColor;
+                    };
+                    hover.OnHoverExit = () =>
+                    {
+                        if (_customPickerHoveredLabel == null) return;
+                        _customPickerHoveredLabel.text = ModLocalization.PickerHoverDefaultItems;
+                        _customPickerHoveredLabel.color = new Color(0.80f, 0.92f, 1f, 1f);
+                    };
+
+                    _customPickerCells.Add(cellView);
                 }
             }
 
@@ -260,9 +262,9 @@ namespace Stellogistics
             _customPickerPlanetsEmptyGo.transform.SetParent(_customPickerPlanetsContentRect, false);
             RectTransform emptyRect = _customPickerPlanetsEmptyGo.GetComponent<RectTransform>()
                 .SetTopStretch(new Vector2(0f, -20f), new Vector2(-20f, 40f));
-            Text emptyTxt = CreateText("EmptyText", emptyRect, 12, FontStyle.Italic, TextAnchor.MiddleCenter, new Color(0.60f, 0.72f, 0.82f, 0.95f));
-            emptyTxt.rectTransform.StretchFull();
-            emptyTxt.text = "No planets with Interplanetary Logistics Stations found.";
+            _customPickerPlanetsEmptyText = CreateText("EmptyText", emptyRect, 12, FontStyle.Italic, TextAnchor.MiddleCenter, new Color(0.60f, 0.72f, 0.82f, 0.95f));
+            _customPickerPlanetsEmptyText.rectTransform.StretchFull();
+            _customPickerPlanetsEmptyText.text = ModLocalization.PickerPlanetsEmpty;
             _customPickerPlanetsEmptyGo.SetActive(false);
 
             _customPickerPlanetsScrollGo.SetActive(false);
@@ -356,7 +358,7 @@ namespace Stellogistics
             int ignoredCount = _config.GetIgnoredAstroCount(seed);
             if (_customTabPlanetsText != null)
             {
-                _customTabPlanetsText.text = ignoredCount > 0 ? $"Planets (-{ignoredCount})" : "Planets";
+                _customTabPlanetsText.text = ModLocalization.TabPlanets(ignoredCount);
             }
 
             if (!_customPickerOpen || _customPickerActiveTab != 3 || _customPickerPlanetsContentRect == null)
@@ -409,9 +411,10 @@ namespace Stellogistics
                     : new Color(0.18f, 0.42f, 0.62f, 1f);
 
                 string dispName = entry.IsStarSystem ? entry.DisplayName : $"  ▸ {entry.DisplayName}";
-                if (dispName.Length > 22)
+                int maxPlanetChars = ModLocalization.IsCJK ? 13 : 22;
+                if (dispName.Length > maxPlanetChars)
                 {
-                    dispName = dispName.Substring(0, 20) + "..";
+                    dispName = dispName.Substring(0, maxPlanetChars - 2) + "..";
                 }
                 row.NameText.text = dispName;
                 row.NameText.fontStyle = entry.IsStarSystem ? FontStyle.Bold : FontStyle.Normal;
@@ -419,7 +422,7 @@ namespace Stellogistics
                     ? new Color(0.65f, 0.55f, 0.58f, 0.85f)
                     : (entry.IsStarSystem ? new Color(0.96f, 0.98f, 1f, 1f) : new Color(0.88f, 0.94f, 1f, 1f));
 
-                row.MetaText.text = effectivelyIgnored ? "Ignored" : entry.MetaInfo;
+                row.MetaText.text = effectivelyIgnored ? ModLocalization.IgnoredWord : entry.MetaInfo;
                 row.MetaText.color = effectivelyIgnored
                     ? CriticalColor
                     : new Color(0.62f, 0.78f, 0.92f, 0.95f);
@@ -521,8 +524,8 @@ namespace Stellogistics
             {
                 _customPickerHoveredLabel.rectTransform.sizeDelta = new Vector2(-430f, 24f);
                 _customPickerHoveredLabel.text = isPlanetsTab
-                    ? "Toggle Star / Planet in Finder"
-                    : "Bright = Shown • Dimmed = Hidden";
+                    ? ModLocalization.PickerHoverDefaultPlanets
+                    : ModLocalization.PickerHoverDefaultItems;
                 _customPickerHoveredLabel.color = new Color(0.80f, 0.92f, 1f, 1f);
             }
 
@@ -541,7 +544,7 @@ namespace Stellogistics
 
             if (_customPickerHoveredLabel != null)
             {
-                _customPickerHoveredLabel.text = nowVisible ? $"{itemName} (Shown)" : $"{itemName} (Hidden)";
+                _customPickerHoveredLabel.text = ModLocalization.PickerHoveredItemStatus(itemName, nowVisible);
                 _customPickerHoveredLabel.color = nowVisible ? HealthyColor : WarningColor;
             }
             RefreshCustomPickerCells();

@@ -102,18 +102,18 @@ namespace Stellogistics
 
             _finderModeBtn = CreateHeaderButton("FinderModeBtn", _headerRect, new Vector2(-172f, -8f), new Vector2(46f, 20f), true, out _finderModeBtnText);
             _finderModeBtnBg = _finderModeBtn.GetComponent<Image>();
-            _finderModeBtnText.text = "Finder";
+            _finderModeBtnText.text = ModLocalization.BtnFinder;
             _finderModeBtn.onClick.AddListener(OnFinderModeButtonClicked);
 
             _sortModeBtn = CreateHeaderButton("SortModeBtn", _headerRect, new Vector2(-112f, -8f), new Vector2(56f, 20f), true, out _sortModeBtnText);
             _sortModeBtn.onClick.AddListener(OnSortModeButtonClicked);
 
             _optionsBtn = CreateHeaderButton("OptionsBtn", _headerRect, new Vector2(-62f, -8f), new Vector2(46f, 20f), true, out _optionsBtnText);
-            _optionsBtnText.text = "Filter ▾";
+            _optionsBtnText.text = ModLocalization.FilterBtnLabel(false);
             _optionsBtn.onClick.AddListener(OnOptionsButtonClicked);
 
             _generalOptionsBtn = CreateHeaderButton("GeneralOptionsBtn", _headerRect, new Vector2(-6f, -8f), new Vector2(52f, 20f), true, out _generalOptionsBtnText);
-            _generalOptionsBtnText.text = "Options ▾";
+            _generalOptionsBtnText.text = ModLocalization.OptionsBtnLabel(false);
             _generalOptionsBtn.onClick.AddListener(OnGeneralOptionsButtonClicked);
 
             // Subtitle Text
@@ -168,7 +168,7 @@ namespace Stellogistics
             RectTransform emptyRect = _emptyStateGo.GetComponent<RectTransform>().SetTopStretch(new Vector2(0f, -8f), new Vector2(-20f, 40f));
             _emptyStateText = CreateText("EmptyText", emptyRect, 12, FontStyle.Italic, TextAnchor.MiddleCenter, new Color(0.60f, 0.72f, 0.82f, 0.95f));
             _emptyStateText.rectTransform.StretchFull();
-            _emptyStateText.text = "No active Interplanetary Logistics slots.";
+            _emptyStateText.text = ModLocalization.EmptyNoActiveSlots;
 
             // Clickable Collapsible Section Headers (Exports & Imports)
             CreateSectionHeader(

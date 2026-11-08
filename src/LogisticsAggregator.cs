@@ -93,7 +93,7 @@ namespace Stellogistics
                 IsStarSystem = false,
                 TargetAstroId = astroId,
                 GalaxySeed = galaxySeed,
-                TargetName = planet != null ? planet.displayName : "Unknown Planet"
+                TargetName = planet != null ? planet.displayName : ModLocalization.UnknownPlanet
             };
 
             if (planet == null || GameMain.data == null)
@@ -128,7 +128,7 @@ namespace Stellogistics
             string collectorPart = summary.TotalCollectorCount > 0
                 ? $", {summary.TotalCollectorCount} OC"
                 : "";
-            summary.TargetSubtitle = $"Planet • {summary.TotalIlsCount} ILS{collectorPart}";
+            summary.TargetSubtitle = $"{ModLocalization.PlanetWord} • {summary.TotalIlsCount} ILS{collectorPart}";
 
             return summary;
         }
@@ -143,7 +143,7 @@ namespace Stellogistics
                 IsStarSystem = true,
                 TargetAstroId = astroId,
                 GalaxySeed = galaxySeed,
-                TargetName = star != null ? $"{star.displayName} System" : "Unknown System"
+                TargetName = star != null ? ModLocalization.StarSystemTitle(star.displayName) : ModLocalization.UnknownSystem
             };
 
             if (star?.planets == null || GameMain.data == null)
@@ -205,14 +205,9 @@ namespace Stellogistics
             LinkHubItems(exportsByItem, importsByItem);
             FinalizeSummary(summary, exportsByItem, importsByItem, config, 0, star.id);
 
-            string modeLabel = filterMode switch
-            {
-                EStarFilterMode.InterstellarSmart => "Interstellar",
-                EStarFilterMode.NetOutIntraSystem => "Netted",
-                _ => "All Remote"
-            };
+            string modeLabel = ModLocalization.StarFilterSubtitleMode(filterMode);
             string collectorPart = summary.TotalCollectorCount > 0 ? $" +{summary.TotalCollectorCount} OC" : "";
-            summary.TargetSubtitle = $"{modeLabel} • {summary.ColonizedPlanetCount}/{star.planets.Length} Planets • {summary.TotalIlsCount} ILS{collectorPart}";
+            summary.TargetSubtitle = $"{modeLabel} • {ModLocalization.ColonizedPlanetsCount(summary.ColonizedPlanetCount, star.planets.Length)} • {summary.TotalIlsCount} ILS{collectorPart}";
 
             return summary;
         }
@@ -1116,7 +1111,7 @@ namespace Stellogistics
             string summaryTitle;
             if (checkedCount == 0)
             {
-                summaryTitle = "No Items Checked";
+                summaryTitle = ModLocalization.FinderSummaryNoItemsChecked;
             }
             else if (singleItemId > 0)
             {
@@ -1128,11 +1123,15 @@ namespace Stellogistics
             }
             else if (onlyBottlenecks)
             {
-                summaryTitle = checkedCount < validStoredCount ? $"Bottlenecks ({checkedCount} Items)" : "Bottlenecks";
+                summaryTitle = checkedCount < validStoredCount
+                    ? ModLocalization.FinderSummaryBottlenecksCount(checkedCount)
+                    : ModLocalization.FinderSummaryBottlenecks;
             }
             else
             {
-                summaryTitle = checkedCount < validStoredCount ? $"{checkedCount} Items" : "All Items";
+                summaryTitle = checkedCount < validStoredCount
+                    ? ModLocalization.FinderSummaryItemsCount(checkedCount)
+                    : ModLocalization.FinderSummaryAllItems;
             }
 
             var summary = new GalaxyItemSearchSummary
@@ -1363,7 +1362,7 @@ namespace Stellogistics
                         else if (ilsCount > 0)
                             meta = $"{ilsCount} ILS";
                         else
-                            meta = "0 ILS (Ignored)";
+                            meta = ModLocalization.ZeroIlsIgnored;
 
                         starPlanetEntries.Add(new PlanetLogisticsFilterEntry
                         {
@@ -1384,8 +1383,8 @@ namespace Stellogistics
                 if (starPlanetEntries.Count > 0 || isStarIgnored)
                 {
                     string starMeta = starCollectors > 0
-                        ? $"System • {starPlanetEntries.Count} Planets • {starIls} ILS +{starCollectors} OC"
-                        : $"System • {starPlanetEntries.Count} Planets • {starIls} ILS";
+                        ? $"{ModLocalization.SystemWord} • {ModLocalization.PlanetsCount(starPlanetEntries.Count)} • {starIls} ILS +{starCollectors} OC"
+                        : $"{ModLocalization.SystemWord} • {ModLocalization.PlanetsCount(starPlanetEntries.Count)} • {starIls} ILS";
 
                     outEntries.Add(new PlanetLogisticsFilterEntry
                     {

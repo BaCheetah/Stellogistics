@@ -13,7 +13,8 @@ namespace Stellogistics
             Vector2 size,
             string title,
             out RectTransform rect,
-            out PointerHoverTracker hoverTracker)
+            out PointerHoverTracker hoverTracker,
+            out Text headerTitleText)
         {
             GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Outline), typeof(PointerHoverTracker));
             go.transform.SetParent(_panelRect, false);
@@ -30,9 +31,9 @@ namespace Stellogistics
             outline.effectColor = new Color(0.32f, 0.68f, 0.95f, 0.65f);
             outline.effectDistance = new Vector2(1f, -1f);
 
-            Text headerTitle = CreateText($"{name}Title", rect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
-            headerTitle.rectTransform.SetTopStretch(new Vector2(10f, -8f), new Vector2(-20f, 18f), 0f);
-            headerTitle.text = title;
+            headerTitleText = CreateText($"{name}Title", rect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f, 1f));
+            headerTitleText.rectTransform.SetTopStretch(new Vector2(10f, -8f), new Vector2(-20f, 18f), 0f);
+            headerTitleText.text = title;
 
             return go;
         }
@@ -122,33 +123,34 @@ namespace Stellogistics
                 "OptionsMenu",
                 new Vector2(-4f, -30f),
                 new Vector2(236f, 304f),
-                "ITEM FILTER",
+                ModLocalization.FilterMenuTitle,
                 out _optionsMenuRect,
-                out _optionsHoverTracker
+                out _optionsHoverTracker,
+                out _optionsMenuTitleText
             );
 
             _optionsTargetLabel = CreateText("TargetScopeLabel", _optionsMenuRect, 10, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.60f, 0.78f, 0.92f, 1f));
             _optionsTargetLabel.rectTransform.SetTopStretch(new Vector2(10f, -26f), new Vector2(-20f, 16f), 0f);
-            _optionsTargetLabel.text = "Global Filter (All Stars & Planets)";
+            _optionsTargetLabel.text = ModLocalization.FilterTargetScope(_config.HasCustomFilter);
 
-            (EItemCategoryFilter cat, string label)[] categories =
+            EItemCategoryFilter[] categories =
             {
-                (EItemCategoryFilter.RawResources, "Raw Resources (Ores, Gas)"),
-                (EItemCategoryFilter.Materials, "Materials & Ingots"),
-                (EItemCategoryFilter.Components, "Components & Parts"),
-                (EItemCategoryFilter.Buildings, "Buildings & Structures"),
-                (EItemCategoryFilter.ConsumablesAndPods, "Fuel, Warpers & Vessels"),
-                (EItemCategoryFilter.Matrices, "Science Matrices")
+                EItemCategoryFilter.RawResources,
+                EItemCategoryFilter.Materials,
+                EItemCategoryFilter.Components,
+                EItemCategoryFilter.Buildings,
+                EItemCategoryFilter.ConsumablesAndPods,
+                EItemCategoryFilter.Matrices
             };
 
             float y = -48f;
             for (int i = 0; i < categories.Length; i++)
             {
-                EItemCategoryFilter cat = categories[i].cat;
+                EItemCategoryFilter cat = categories[i];
                 CheckboxToggleRow toggleRow = CreateCheckboxRow(
                     _optionsMenuRect,
                     $"Toggle_{cat}",
-                    categories[i].label,
+                    ModLocalization.CategoryLabel(cat),
                     y,
                     () => OnCategoryToggleClicked(cat),
                     null,
@@ -166,7 +168,7 @@ namespace Stellogistics
             CheckboxToggleRow exclude100Row = CreateCheckboxRow(
                 _optionsMenuRect,
                 "Toggle_Exclude100Percent",
-                "Exclude ≥90% (Full/Tapped)",
+                ModLocalization.ExcludeRowLabel(EExcludeMode.Tapped90, 40),
                 y,
                 () => OnCategoryToggleClicked(EItemCategoryFilter.Exclude100Percent),
                 null,
@@ -190,7 +192,7 @@ namespace Stellogistics
             _ignoreTargetToggleRow = CreateCheckboxRow(
                 _optionsMenuRect,
                 "OptToggle_IgnoreTarget",
-                "Ignore Target in Finder",
+                ModLocalization.IgnoreTargetInFinderLabel(false, 0),
                 y,
                 () =>
                 {
@@ -206,8 +208,8 @@ namespace Stellogistics
             );
             y -= 26f;
 
-            Button resetFiltersBtn = CreateHeaderButton("BtnResetFilters", _optionsMenuRect, new Vector2(-120f, y - 6f), new Vector2(108f, 22f), true, out Text resetFiltersTxt);
-            resetFiltersTxt.text = "Reset Filters";
+            Button resetFiltersBtn = CreateHeaderButton("BtnResetFilters", _optionsMenuRect, new Vector2(-120f, y - 6f), new Vector2(108f, 22f), true, out _resetFiltersBtnText);
+            _resetFiltersBtnText.text = ModLocalization.BtnResetFilters;
             resetFiltersBtn.onClick.AddListener(() =>
             {
                 _finderFocusItemId = 0;
@@ -218,8 +220,8 @@ namespace Stellogistics
                 _forceRefresh = true;
             });
 
-            Button customBtn = CreateHeaderButton("BtnCustom", _optionsMenuRect, new Vector2(-6f, y - 6f), new Vector2(108f, 22f), true, out Text customTxt);
-            customTxt.text = "Custom Picker";
+            Button customBtn = CreateHeaderButton("BtnCustom", _optionsMenuRect, new Vector2(-6f, y - 6f), new Vector2(108f, 22f), true, out _customPickerBtnText);
+            _customPickerBtnText.text = ModLocalization.BtnCustomPicker;
             customBtn.onClick.AddListener(ToggleCustomItemPicker);
 
             _optionsMenuGo.SetActive(false);
@@ -231,9 +233,10 @@ namespace Stellogistics
                 "GeneralOptionsMenu",
                 new Vector2(-4f, -32f),
                 new Vector2(236f, 198f),
-                "OPTIONS — DISPLAY & UI",
+                ModLocalization.GeneralOptionsMenuTitle,
                 out _generalOptionsMenuRect,
-                out _generalOptionsHoverTracker
+                out _generalOptionsHoverTracker,
+                out _generalOptionsMenuTitleText
             );
 
             _generalOptionToggles.Clear();
@@ -241,7 +244,7 @@ namespace Stellogistics
 
             _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
                 _generalOptionsMenuRect,
-                "Show +In-Transit Bar (Hatched)",
+                ModLocalization.OptShowInTransitBar,
                 y,
                 () => _config.ShowInTransitBar.Value,
                 () => _config.ShowInTransitBar.Value = !_config.ShowInTransitBar.Value
@@ -250,7 +253,7 @@ namespace Stellogistics
 
             _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
                 _generalOptionsMenuRect,
-                "Include Orbital Collectors (OC)",
+                ModLocalization.OptIncludeOrbitalCollectors,
                 y,
                 () => _config.IncludeOrbitalCollectors.Value,
                 () => _config.IncludeOrbitalCollectors.Value = !_config.IncludeOrbitalCollectors.Value
@@ -259,31 +262,30 @@ namespace Stellogistics
 
             _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
                 _generalOptionsMenuRect,
-                "Switch to Planet / System on Hover",
+                ModLocalization.OptShowOnHover,
                 y,
                 () => _config.ShowOnHover.Value,
                 () => _config.ShowOnHover.Value = !_config.ShowOnHover.Value
             ));
             y -= 28f;
 
-            Text refreshTitle = CreateText("RefreshRateLabel", _generalOptionsMenuRect, 10, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.70f, 0.85f, 0.96f, 1f));
-            refreshTitle.rectTransform.SetTopStretch(new Vector2(8f, y), new Vector2(-16f, 15f), 0f);
-            refreshTitle.text = "REFRESH RATE";
+            _refreshRateTitleText = CreateText("RefreshRateLabel", _generalOptionsMenuRect, 10, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.70f, 0.85f, 0.96f, 1f));
+            _refreshRateTitleText.rectTransform.SetTopStretch(new Vector2(8f, y), new Vector2(-16f, 15f), 0f);
+            _refreshRateTitleText.text = ModLocalization.RefreshRateHeader;
             y -= 17f;
 
-            string[] rateLabels = { "Live", "Medium", "Slow", "Paused" };
             for (int i = 0; i < 4; i++)
             {
                 ERefreshRate rate = (ERefreshRate)i;
                 Button btn = CreateHeaderButton($"BtnRefresh_{rate}", _generalOptionsMenuRect, new Vector2(6f + i * 57f, y), new Vector2(53f, 20f), false, out _refreshBtnTxts[i]);
-                _refreshBtnTxts[i].text = rateLabels[i];
+                _refreshBtnTxts[i].text = ModLocalization.RefreshRateLabel(rate);
                 _refreshBtnBgs[i] = btn.GetComponent<Image>();
                 btn.onClick.AddListener(() => SetRefreshRate(rate));
             }
             y -= 26f;
 
-            Button resetPosBtn = CreateHeaderButton("BtnResetPos", _generalOptionsMenuRect, new Vector2(-6f, y - 4f), new Vector2(224f, 22f), true, out Text resetPosTxt);
-            resetPosTxt.text = "Reset UI Position & Size";
+            Button resetPosBtn = CreateHeaderButton("BtnResetPos", _generalOptionsMenuRect, new Vector2(-6f, y - 4f), new Vector2(224f, 22f), true, out _resetPosBtnText);
+            _resetPosBtnText.text = ModLocalization.BtnResetUiPosAndSize;
             resetPosBtn.onClick.AddListener(() =>
             {
                 _config.ResetPanelLayout();
@@ -326,13 +328,13 @@ namespace Stellogistics
             {
                 _optionsMenuOpen = false;
                 if (_optionsMenuGo != null) _optionsMenuGo.SetActive(false);
-                if (_optionsBtnText != null) _optionsBtnText.text = "Filter ▾";
+                if (_optionsBtnText != null) _optionsBtnText.text = ModLocalization.FilterBtnLabel(false);
             }
             if (_generalOptionsMenuOpen)
             {
                 _generalOptionsMenuOpen = false;
                 if (_generalOptionsMenuGo != null) _generalOptionsMenuGo.SetActive(false);
-                if (_generalOptionsBtnText != null) _generalOptionsBtnText.text = "Options ▾";
+                if (_generalOptionsBtnText != null) _generalOptionsBtnText.text = ModLocalization.OptionsBtnLabel(false);
             }
         }
 
@@ -523,7 +525,7 @@ namespace Stellogistics
             {
                 _generalOptionsMenuOpen = false;
                 _generalOptionsMenuGo.SetActive(false);
-                _generalOptionsBtnText.text = "Options ▾";
+                _generalOptionsBtnText.text = ModLocalization.OptionsBtnLabel(false);
             }
             if (_optionsMenuOpen && _panelCollapsed)
             {
@@ -531,7 +533,7 @@ namespace Stellogistics
                 _panelCollapseBtnText.text = "▼";
             }
             _optionsMenuGo.SetActive(_optionsMenuOpen);
-            _optionsBtnText.text = _optionsMenuOpen ? "Filter ▴" : "Filter ▾";
+            _optionsBtnText.text = ModLocalization.FilterBtnLabel(_optionsMenuOpen);
             if (_optionsMenuOpen)
             {
                 EventSystem.current?.SetSelectedGameObject(_optionsBtn.gameObject);
@@ -547,7 +549,7 @@ namespace Stellogistics
             {
                 _optionsMenuOpen = false;
                 _optionsMenuGo.SetActive(false);
-                _optionsBtnText.text = "Filter ▾";
+                _optionsBtnText.text = ModLocalization.FilterBtnLabel(false);
             }
             if (_generalOptionsMenuOpen && _panelCollapsed)
             {
@@ -555,7 +557,7 @@ namespace Stellogistics
                 _panelCollapseBtnText.text = "▼";
             }
             _generalOptionsMenuGo.SetActive(_generalOptionsMenuOpen);
-            _generalOptionsBtnText.text = _generalOptionsMenuOpen ? "Options ▴" : "Options ▾";
+            _generalOptionsBtnText.text = ModLocalization.OptionsBtnLabel(_generalOptionsMenuOpen);
             if (_generalOptionsMenuOpen)
             {
                 EventSystem.current?.SetSelectedGameObject(_generalOptionsBtn.gameObject);
@@ -643,25 +645,21 @@ namespace Stellogistics
                 return;
             }
 
-            _optionsTargetLabel.text = _config.HasCustomFilter
-                ? "Global Filter (Active across Starmap)"
-                : "Global Filter (All Shown)";
+            _optionsTargetLabel.text = ModLocalization.FilterTargetScope(_config.HasCustomFilter);
 
             if (_excludeRowLabelText != null && _excludeThresholdBtnText != null)
             {
                 _config.GetValidatedThresholds(out _, out int warnPct);
+                _excludeRowLabelText.text = ModLocalization.ExcludeRowLabel(_config.ExcludeMode, warnPct);
                 switch (_config.ExcludeMode)
                 {
                     case EExcludeMode.Full100:
-                        _excludeRowLabelText.text = "Exclude 100% Entries";
                         _excludeThresholdBtnText.text = "100%";
                         break;
                     case EExcludeMode.Tapped90:
-                        _excludeRowLabelText.text = "Exclude ≥90% (Tapped)";
                         _excludeThresholdBtnText.text = "≥90%";
                         break;
                     default:
-                        _excludeRowLabelText.text = $"Exclude >{warnPct}% (Healthy)";
                         _excludeThresholdBtnText.text = $">{warnPct}%";
                         break;
                 }
@@ -677,14 +675,131 @@ namespace Stellogistics
             {
                 bool ignored = _ignoreTargetToggleRow.Getter();
                 int totalIgnored = _config.GetIgnoredAstroCount(CurrentGalaxySeed);
-                string targetKind = (_lastResolvedStar != null && _lastResolvedPlanet == null) ? "Star System" : "Planet";
-                string countSuffix = totalIgnored > 0 ? $" ({totalIgnored} ignored)" : "";
-                _ignoreTargetToggleRow.LabelText.text = $"Ignore {targetKind} in Finder{countSuffix}";
+                bool isStarSystem = _lastResolvedStar != null && _lastResolvedPlanet == null;
+                _ignoreTargetToggleRow.LabelText.text = ModLocalization.IgnoreTargetInFinderLabel(isStarSystem, totalIgnored);
                 SetCheckboxVisual(_ignoreTargetToggleRow, ignored, WarningColor);
                 if (!ignored)
                 {
                     _ignoreTargetToggleRow.LabelText.color = new Color(0.92f, 0.96f, 1f, 1f);
                 }
+            }
+        }
+
+        private void ApplyLocalizedStaticLabels()
+        {
+            if (_optionsBtnText != null)
+            {
+                _optionsBtnText.text = ModLocalization.FilterBtnLabel(_optionsMenuOpen);
+            }
+            if (_generalOptionsBtnText != null)
+            {
+                _generalOptionsBtnText.text = ModLocalization.OptionsBtnLabel(_generalOptionsMenuOpen);
+            }
+
+            if (_optionsMenuTitleText != null)
+            {
+                _optionsMenuTitleText.text = ModLocalization.FilterMenuTitle;
+            }
+            if (_resetFiltersBtnText != null)
+            {
+                _resetFiltersBtnText.text = ModLocalization.BtnResetFilters;
+            }
+            if (_customPickerBtnText != null)
+            {
+                _customPickerBtnText.text = ModLocalization.BtnCustomPicker;
+            }
+
+            for (int i = 0; i < _filterToggles.Count; i++)
+            {
+                CheckboxToggleRow row = _filterToggles[i];
+                if (row.Category != EItemCategoryFilter.None && row.Category != EItemCategoryFilter.Exclude100Percent && row.LabelText != null)
+                {
+                    row.LabelText.text = ModLocalization.CategoryLabel(row.Category);
+                }
+            }
+
+            if (_generalOptionsMenuTitleText != null)
+            {
+                _generalOptionsMenuTitleText.text = ModLocalization.GeneralOptionsMenuTitle;
+            }
+            if (_generalOptionToggles.Count >= 3)
+            {
+                if (_generalOptionToggles[0].LabelText != null) _generalOptionToggles[0].LabelText.text = ModLocalization.OptShowInTransitBar;
+                if (_generalOptionToggles[1].LabelText != null) _generalOptionToggles[1].LabelText.text = ModLocalization.OptIncludeOrbitalCollectors;
+                if (_generalOptionToggles[2].LabelText != null) _generalOptionToggles[2].LabelText.text = ModLocalization.OptShowOnHover;
+            }
+            if (_refreshRateTitleText != null)
+            {
+                _refreshRateTitleText.text = ModLocalization.RefreshRateHeader;
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                if (_refreshBtnTxts[i] != null)
+                {
+                    _refreshBtnTxts[i].text = ModLocalization.RefreshRateLabel((ERefreshRate)i);
+                }
+            }
+            if (_resetPosBtnText != null)
+            {
+                _resetPosBtnText.text = ModLocalization.BtnResetUiPosAndSize;
+            }
+
+            if (_customPickerTitleText != null)
+            {
+                _customPickerTitleText.text = ModLocalization.PickerWindowTitle;
+            }
+            if (_customTabItemsText != null)
+            {
+                _customTabItemsText.text = ModLocalization.TabItems;
+            }
+            if (_customTabBuildingsText != null)
+            {
+                _customTabBuildingsText.text = ModLocalization.TabBuildings;
+            }
+            if (_pickerCheckAllText != null)
+            {
+                _pickerCheckAllText.text = ModLocalization.BtnCheckAll;
+            }
+            if (_pickerUncheckAllText != null)
+            {
+                _pickerUncheckAllText.text = ModLocalization.BtnUncheckAll;
+            }
+            if (_pickerShowAllPlanetsText != null)
+            {
+                _pickerShowAllPlanetsText.text = ModLocalization.BtnShowAllPlanets;
+            }
+            if (_customPickerPlanetsEmptyText != null)
+            {
+                _customPickerPlanetsEmptyText.text = ModLocalization.PickerPlanetsEmpty;
+            }
+
+            // Refresh ItemProto names on CustomPickerCells in case language changed at runtime
+            for (int i = 0; i < _customPickerCells.Count; i++)
+            {
+                CustomPickerCell cell = _customPickerCells[i];
+                ItemProto proto = LDB.items?.Select(cell.ItemId);
+                if (proto != null && !string.IsNullOrEmpty(proto.name))
+                {
+                    cell.ItemName = proto.name;
+                }
+            }
+
+            if (_customPickerOpen)
+            {
+                SetCustomPickerTab(_customPickerActiveTab);
+            }
+            else
+            {
+                RefreshCustomPickerPlanetsList();
+            }
+
+            if (_optionsMenuOpen)
+            {
+                RefreshOptionsMenuState();
+            }
+            if (_generalOptionsMenuOpen)
+            {
+                RefreshGeneralOptionsMenuState();
             }
         }
     }

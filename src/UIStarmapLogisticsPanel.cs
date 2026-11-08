@@ -131,14 +131,20 @@ namespace Stellogistics
 
         private GameObject _optionsMenuGo;
         private RectTransform _optionsMenuRect;
+        private Text _optionsMenuTitleText;
         private Text _optionsTargetLabel;
         private Text _excludeRowLabelText;
         private Text _excludeThresholdBtnText;
+        private Text _resetFiltersBtnText;
+        private Text _customPickerBtnText;
         private CheckboxToggleRow _ignoreTargetToggleRow;
         private readonly List<CheckboxToggleRow> _filterToggles = new List<CheckboxToggleRow>();
 
         private GameObject _generalOptionsMenuGo;
         private RectTransform _generalOptionsMenuRect;
+        private Text _generalOptionsMenuTitleText;
+        private Text _refreshRateTitleText;
+        private Text _resetPosBtnText;
         private readonly List<CheckboxToggleRow> _generalOptionToggles = new List<CheckboxToggleRow>();
         private readonly Image[] _refreshBtnBgs = new Image[4];
         private readonly Text[] _refreshBtnTxts = new Text[4];
@@ -149,15 +155,21 @@ namespace Stellogistics
         private GameObject _customPickerPlanetsScrollGo;
         private RectTransform _customPickerPlanetsContentRect;
         private GameObject _customPickerPlanetsEmptyGo;
+        private Text _customPickerPlanetsEmptyText;
         private Text _customPickerTitleText;
         private Text _customPickerHoveredLabel;
         private Image _customTabItemsBg;
+        private Text _customTabItemsText;
         private Image _customTabBuildingsBg;
+        private Text _customTabBuildingsText;
         private Image _customTabPlanetsBg;
         private Text _customTabPlanetsText;
         private Button _pickerCheckAllBtn;
+        private Text _pickerCheckAllText;
         private Button _pickerUncheckAllBtn;
+        private Text _pickerUncheckAllText;
         private Button _pickerShowAllPlanetsBtn;
+        private Text _pickerShowAllPlanetsText;
         private int _customPickerActiveTab = 1;
         private bool _customPickerOpen = false;
         private readonly List<CustomPickerCell> _customPickerCells = new List<CustomPickerCell>();
@@ -183,6 +195,7 @@ namespace Stellogistics
 
         private int _lastTargetAstroId = -1;
         private int _lastGalaxySeed = 0;
+        private int _lastLanguageLcid = -1;
         private PlanetData _lastResolvedPlanet = null;
         private StarData _lastResolvedStar = null;
         private float _nextRefreshTime = 0f;
@@ -262,6 +275,8 @@ namespace Stellogistics
             BuildOptionsMenu();
             BuildGeneralOptionsMenu();
             BuildCustomItemPicker();
+            _lastLanguageLcid = Localization.CurrentLanguageLCID;
+            ApplyLocalizedStaticLabels();
         }
 
         public void OnStarmapOpened()
@@ -332,6 +347,15 @@ namespace Stellogistics
                 _finderFocusItemId = 0;
                 _finderHistoryStack.Clear();
                 LogisticsAggregator.InvalidateCaches();
+                _forceRefresh = true;
+            }
+
+            int currentLcid = Localization.CurrentLanguageLCID;
+            if (currentLcid != _lastLanguageLcid)
+            {
+                _lastLanguageLcid = currentLcid;
+                LogisticsAggregator.InvalidateCaches();
+                ApplyLocalizedStaticLabels();
                 _forceRefresh = true;
             }
 

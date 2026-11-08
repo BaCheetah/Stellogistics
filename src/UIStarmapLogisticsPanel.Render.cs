@@ -8,12 +8,7 @@ namespace Stellogistics
     {
         private string GetSortLabel()
         {
-            return _config.SortOrder.Value switch
-            {
-                ESortOrder.ShortageFirst => "Sort: Alert",
-                ESortOrder.ItemId => "Sort: ID",
-                _ => "Sort: Pct ↓"
-            };
+            return ModLocalization.SortBtnLabel(_config.SortOrder.Value);
         }
 
         private void ShowEmptyState(string message, float panelWidth, float maxScrollHeight, float activeHeaderH)
@@ -89,7 +84,7 @@ namespace Stellogistics
                 _exportsHeaderRect.anchoredPosition = new Vector2(0f, -cursorY);
                 string expArrow = _exportsCollapsed ? "▶" : "▼";
                 _exportsHeaderText.text = $"{expArrow} {exportsTitle} ({exports.Count})";
-                _exportsAlertText.text = FormatAlertSummary(critExports, warnExports, "EMPTY", "LOW");
+                _exportsAlertText.text = FormatAlertSummary(critExports, warnExports, ModLocalization.AlertEmpty, ModLocalization.AlertLow);
                 _exportsAlertText.color = critExports > 0 ? CriticalColor : WarningColor;
                 cursorY += SectionHeaderHeight + RowSpacing;
 
@@ -119,7 +114,7 @@ namespace Stellogistics
                 _importsHeaderRect.anchoredPosition = new Vector2(0f, -cursorY);
                 string impArrow = _importsCollapsed ? "▶" : "▼";
                 _importsHeaderText.text = $"{impArrow} {importsTitle} ({imports.Count})";
-                _importsAlertText.text = FormatAlertSummary(critImports, warnImports, "STARVED", "LOW");
+                _importsAlertText.text = FormatAlertSummary(critImports, warnImports, ModLocalization.AlertStarved, ModLocalization.AlertLow);
                 _importsAlertText.color = critImports > 0 ? CriticalColor : WarningColor;
                 cursorY += SectionHeaderHeight + RowSpacing;
 
@@ -164,7 +159,7 @@ namespace Stellogistics
             _subtitleText.gameObject.SetActive(true);
             _fleetInfoText.gameObject.SetActive(true);
             _finderModeBtn.gameObject.SetActive(true);
-            _finderModeBtnText.text = "Finder";
+            _finderModeBtnText.text = ModLocalization.BtnFinder;
             if (_finderModeBtnBg != null) _finderModeBtnBg.color = new Color(0.15f, 0.26f, 0.39f, 0.96f);
             if (_filterModeBtnBg != null) _filterModeBtnBg.color = new Color(0.15f, 0.26f, 0.39f, 0.96f);
             _sortModeBtn.gameObject.SetActive(true);
@@ -174,26 +169,19 @@ namespace Stellogistics
 
             _titleText.text = summary.TargetName;
             string pausedSuffix = _config.RefreshRate.Value == ERefreshRate.Paused
-                ? " • <color=#FFD24C>⏸ Paused</color>"
+                ? ModLocalization.PausedSuffix
                 : "";
             _subtitleText.text = $"{summary.TargetSubtitle}{pausedSuffix}";
 
             int totalShips = summary.TotalIdleShips + summary.TotalWorkShips;
             bool showIdle = _config.ShowIdleVessels.Value;
             int shownShips = showIdle ? summary.TotalIdleShips : summary.TotalWorkShips;
-            string shipStatusLabel = showIdle ? "idle" : "on route";
-            string filterNote = summary.FilteredOutItemCount > 0 ? $"  •  {summary.FilteredOutItemCount} filtered" : "";
-            _fleetInfoText.text = $"Vessels: {shownShips}/{totalShips} {shipStatusLabel}  •  Warpers: {CombinedLogisticsItem.FormatAmount(summary.TotalWarperCount)}{filterNote}";
+            _fleetInfoText.text = ModLocalization.FleetInfoLine(shownShips, totalShips, showIdle, summary.TotalWarperCount, summary.FilteredOutItemCount);
 
             _filterModeBtn.gameObject.SetActive(summary.IsStarSystem);
             if (summary.IsStarSystem)
             {
-                _filterModeBtnText.text = _config.StarSystemFilterMode.Value switch
-                {
-                    EStarFilterMode.InterstellarSmart => "Ext Only",
-                    EStarFilterMode.NetOutIntraSystem => "Netted",
-                    _ => "All Slots"
-                };
+                _filterModeBtnText.text = ModLocalization.StarFilterBtnLabel(_config.StarSystemFilterMode.Value);
             }
 
             _sortModeBtnText.text = GetSortLabel();
@@ -206,10 +194,10 @@ namespace Stellogistics
             if (!summary.HasAnySlots)
             {
                 string emptyMsg = summary.FilteredOutItemCount > 0
-                    ? $"{summary.FilteredOutItemCount} item(s) hidden by Filter."
+                    ? ModLocalization.EmptyFilteredOut(summary.FilteredOutItemCount)
                     : (summary.HasAnyStations
-                        ? "No matching remote supply/demand slots."
-                        : "No Interplanetary Logistics Stations built.");
+                        ? ModLocalization.EmptyNoMatchingRemoteSlots
+                        : ModLocalization.EmptyNoIlsBuilt);
                 ShowEmptyState(emptyMsg, panelWidth, maxScrollHeight, activeHeaderH);
                 return;
             }
@@ -217,11 +205,11 @@ namespace Stellogistics
             bool isStar = summary.IsStarSystem;
             LayoutSections(
                 summary.Exports,
-                "EXPORTS",
+                ModLocalization.SectionExports,
                 summary.CriticalExportCount,
                 summary.WarningExportCount,
                 summary.Imports,
-                "IMPORTS",
+                ModLocalization.SectionImports,
                 summary.CriticalImportCount,
                 summary.WarningImportCount,
                 panelWidth,
@@ -251,17 +239,17 @@ namespace Stellogistics
             _lastFinderCheckedCount = summary.CheckedItemCount;
             if (_finderHistoryStack.Count > 0)
             {
-                _finderModeBtnText.text = "← Back";
+                _finderModeBtnText.text = ModLocalization.BtnBack;
                 if (_finderModeBtnBg != null) _finderModeBtnBg.color = new Color(0.26f, 0.50f, 0.74f, 0.98f);
             }
             else if (_finderFocusItemId > 0)
             {
-                _finderModeBtnText.text = "← All";
+                _finderModeBtnText.text = ModLocalization.BtnAll;
                 if (_finderModeBtnBg != null) _finderModeBtnBg.color = new Color(0.26f, 0.50f, 0.74f, 0.98f);
             }
             else
             {
-                _finderModeBtnText.text = "← Back";
+                _finderModeBtnText.text = ModLocalization.BtnBack;
                 if (_finderModeBtnBg != null) _finderModeBtnBg.color = new Color(0.22f, 0.40f, 0.62f, 0.98f);
             }
 
@@ -271,19 +259,19 @@ namespace Stellogistics
             _resizeGripGo.SetActive(true);
 
             int totalIgnoredAstros = _config.GetIgnoredAstroCount(CurrentGalaxySeed);
-            string ignoredSuffix = summary.IgnoredPlanetMatchCount > 0
-                ? $" • {summary.IgnoredPlanetMatchCount} Ignored"
-                : (totalIgnoredAstros > 0 ? $" • {totalIgnoredAstros} Filtered" : "");
-
             bool onlyBottlenecks = _config.ExcludeEnabled && _config.ExcludeMode == EExcludeMode.Healthy;
-            string pausedSuffix = _config.RefreshRate.Value == ERefreshRate.Paused
-                ? " • <color=#FFD24C>⏸ Paused</color>"
-                : "";
-            _titleText.text = $"Finder: {summary.ItemName}";
-            _subtitleText.text = (onlyBottlenecks && summary.CheckedItemCount != 1)
-                ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}{pausedSuffix}"
-                : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}{pausedSuffix}";
-            _fleetInfoText.text = "Click row: pin planet • Icon: sources • ✕: hide";
+            bool isPaused = _config.RefreshRate.Value == ERefreshRate.Paused;
+            _titleText.text = ModLocalization.FinderHeaderTitle(summary.ItemName);
+            _subtitleText.text = ModLocalization.FinderSubtitle(
+                summary.ExportingPlanets.Count,
+                summary.ImportingPlanets.Count,
+                onlyBottlenecks,
+                summary.CheckedItemCount,
+                summary.IgnoredPlanetMatchCount,
+                totalIgnoredAstros,
+                isPaused
+            );
+            _fleetInfoText.text = ModLocalization.FinderHintLine;
 
             _sortModeBtnText.text = GetSortLabel();
 
@@ -298,17 +286,17 @@ namespace Stellogistics
                 string emptyMsg;
                 if (summary.CheckedItemCount == 0)
                 {
-                    emptyMsg = "No items checked — click any item(s) in the Picker to locate.";
+                    emptyMsg = ModLocalization.EmptyNoItemsChecked;
                 }
                 else if (summary.IgnoredPlanetMatchCount > 0)
                 {
-                    emptyMsg = $"{summary.IgnoredPlanetMatchCount} matching planet(s) hidden by Planet Filter (Filter ▾ → Custom Picker → Planets).";
+                    emptyMsg = ModLocalization.EmptyPlanetsIgnored(summary.IgnoredPlanetMatchCount);
                 }
                 else
                 {
                     emptyMsg = onlyBottlenecks
-                        ? $"All checked remote slots are Healthy (>{warnPct}%)!"
-                        : $"No planet exports or imports {summary.ItemName}.";
+                        ? ModLocalization.EmptyAllHealthy(warnPct)
+                        : ModLocalization.EmptyNoPlanetTradesItem(summary.ItemName);
                 }
                 ShowEmptyState(emptyMsg, panelWidth, maxScrollHeight, activeHeaderH);
                 return;
@@ -317,11 +305,11 @@ namespace Stellogistics
             bool isBottleneck = summary.IsBottleneckScan;
             LayoutSections(
                 summary.ExportingPlanets,
-                "EXPORTING PLANETS",
+                ModLocalization.SectionExportingPlanets,
                 summary.CriticalExportPlanetCount,
                 summary.WarningExportPlanetCount,
                 summary.ImportingPlanets,
-                "IMPORTING PLANETS",
+                ModLocalization.SectionImportingPlanets,
                 summary.CriticalImportPlanetCount,
                 summary.WarningImportPlanetCount,
                 panelWidth,
@@ -364,9 +352,8 @@ namespace Stellogistics
 
         private static string FormatHubBadge(CombinedLogisticsItem item)
         {
-            string counterRole = item.Logic == ELogisticStorage.Supply ? "Imp" : "Exp";
             string counterMax = CombinedLogisticsItem.FormatAmount(item.HubCounterpartMax);
-            return $"<color=#5CE1FF>⇄ Hub ({counterRole} {counterMax})</color>";
+            return ModLocalization.HubBadge(item.Logic, counterMax);
         }
 
         private void BindItemVisuals(
@@ -415,17 +402,7 @@ namespace Stellogistics
                 : statusTextColor;
 
             int pct = item.DisplayPercent;
-            string statusTag = "";
-            if (status == EHealthStatus.Critical)
-            {
-                statusTag = item.Logic == ELogisticStorage.Supply
-                    ? (item.StoredCount == 0 ? "EMPTY " : "LOW ")
-                    : (item.StoredCount == 0 ? "STARVED " : "LOW ");
-            }
-            else if (status == EHealthStatus.Warning)
-            {
-                statusTag = "LOW ";
-            }
+            string statusTag = ModLocalization.RowStatusTag(status, item.Logic, item.StoredCount);
 
             string bottleneckPrefix = item.HasLogisticsBottleneck
                 ? "<color=#FFD24C>⚡+ILS</color> • "
@@ -451,7 +428,9 @@ namespace Stellogistics
             {
                 return "";
             }
-            int maxChars = Mathf.Max(18, Mathf.RoundToInt((rowWidth - 135f) / 6.8f));
+            float charWidth = ModLocalization.IsCJK ? 11.5f : 6.8f;
+            int minChars = ModLocalization.IsCJK ? 11 : 18;
+            int maxChars = Mathf.Max(minChars, Mathf.RoundToInt((rowWidth - 135f) / charWidth));
             return displayName.Length > maxChars
                 ? displayName.Substring(0, maxChars - 2) + ".."
                 : displayName;
@@ -472,7 +451,7 @@ namespace Stellogistics
             string slotDesc = FormatSlotDescription(item);
             if (isStarSystem && item.PlanetCount > 1)
             {
-                slotDesc = $"{item.PlanetCount} Planets • {slotDesc}";
+                slotDesc = $"{ModLocalization.PlanetsCount(item.PlanetCount)} • {slotDesc}";
             }
             if (item.IsHub)
             {
