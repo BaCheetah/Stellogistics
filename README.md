@@ -8,8 +8,6 @@
 
 **Stellogistics** is a quality-of-life mod for *Dyson Sphere Program* (BepInEx 5) that adds an interactive, customizable **Interstellar Logistics Overview Panel** directly onto the Starmap. Instead of inspecting Interplanetary Logistics Stations (ILS) one by one, Stellogistics aggregates every remote supply and demand slot across an entire **Planet** or **Star System** into a single, combined **Exports** and **Imports** dashboard.
 
-- **Source Code**: https://github.com/BaCheetah/Stellogistics
-
 ---
 
 ## Why Stellogistics? (The Problem It Solves)
@@ -66,46 +64,6 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
 
 ---
 
-## Configuration
-
-A configuration file is generated at `BepInEx/config/com.stellogistics.dsp.cfg` after first launch, storing your custom panel layout, thresholds, and saved per-star/per-planet filters.
-
----
-
-## Source Code & How to Compile Yourself
-
-The full source code is openly available at:
-https://github.com/BaCheetah/Stellogistics
-
-If you prefer to inspect the code and compile the `.dll` yourself rather than using a prebuilt binary, you don't even need *Dyson Sphere Program* installed on the build machine—all game and BepInEx reference assemblies are fetched automatically via NuGet.
-
-### Prerequisites
-1. Install the **[.NET SDK](https://dotnet.microsoft.com/download)** (any modern version such as .NET 6, 8, or newer).
-
-### Step-by-Step Build Instructions
-1. **Clone or download the repository**:
-   ```powershell
-   git clone https://github.com/BaCheetah/Stellogistics.git
-   cd Stellogistics
-   ```
-   *(Or click **Code → Download ZIP** on https://github.com/BaCheetah/Stellogistics and extract it to a folder.)*
-
-2. **Build the project in Release mode**:
-   ```powershell
-   dotnet build -c Release
-   ```
-   This restores the required NuGet reference packages (from `nuget.org` and `nuget.bepinex.dev`), compiles `Stellogistics.dll`, and packages everything automatically.
-
-3. **Locate the compiled output**:
-   - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
-   - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.2.1.zip`
-
-4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.2.1.zip` as a local mod in Thunderstore Mod Manager / r2modman).
-
----
-
 ## 🇨🇳 简体中文说明 (Simplified Chinese Overview)
 
 **告别逐个点击几十座星际物流塔来排查产线停工的原因！**
@@ -145,3 +103,36 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
    - **輸送能力ボトルネック表示 (`⚡+ILS`)**：輸入側が不足しており輸送中の船を含めても容量が埋まらない一方、他の惑星に十分な輸出在庫がある場合に `⚡+ILS` を表示。「生産不足ではなく、ILSまたは輸送船の追加が必要」と即座に判別できます。
    - **ハブ検知 (`⇄ ハブ`)**：同じアイテムを輸出・輸入の両方で扱っている中継惑星を自動表示します。
    - **星系フィルタモード (`星間のみ` / `純収支` / `全スロット`)**：星系全体を表示中、星系内だけで完結しているローカル輸送を除外し、純粋な星間輸出入のみを表示できます。
+
+---
+
+## Configuration
+
+A configuration file is generated at `BepInEx/config/com.stellogistics.dsp.cfg` after first launch, storing your custom panel layout, thresholds, and saved per-star/per-planet filters.
+
+---
+
+## Source Code & How to Compile Yourself
+
+If you prefer to inspect the code and compile the `.dll` yourself rather than using a prebuilt binary, you don't even need *Dyson Sphere Program* installed on the build machine—all game and BepInEx reference assemblies are fetched automatically via NuGet.
+
+### Prerequisites
+1. Install the **[.NET SDK](https://dotnet.microsoft.com/download)** (any modern version such as .NET 6, 8, or newer).
+
+### Step-by-Step Build Instructions
+1. **Clone or download the repository**:
+   *(Or click **Code → Download ZIP** on https://github.com/BaCheetah/Stellogistics and extract it to a folder.)*
+
+2. **Build the project in Release mode**:
+   ```powershell
+   dotnet build -c Release
+   ```
+   This restores the required NuGet reference packages (from `nuget.org` and `nuget.bepinex.dev`), compiles `Stellogistics.dll`, and packages everything automatically.
+
+3. **Locate the compiled output**:
+   - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
+   - **Thunderstore-Ready Folder**: `dist/package/`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.2.2.zip`
+
+4. **Install manually**:
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.2.2.zip` as a local mod in Thunderstore Mod Manager / r2modman).

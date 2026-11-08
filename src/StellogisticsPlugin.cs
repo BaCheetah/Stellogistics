@@ -10,7 +10,7 @@ namespace Stellogistics
     {
         public const string PluginGuid = "com.stellogistics.dsp";
         public const string PluginName = "Stellogistics";
-        public const string PluginVersion = "2.2.1";
+        public const string PluginVersion = "2.2.2";
 
         public static ManualLogSource Log { get; private set; }
         public static StellogisticsConfig ModConfig { get; private set; }

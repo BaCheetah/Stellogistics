@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.2
+- **README & Documentation Cleanup**:
+  - Moved the Simplified Chinese (`简体中文`) and Japanese (`日本語`) overview sections above `Configuration` and `Source Code & How to Compile Yourself`, keeping `Configuration` and build instructions at the bottom of `README.md`, and streamlined repository link references.
+
 ## 2.2.1
 - **Automatic Multi-Language Localization (`简体中文` / `日本語` / `English` / `Deutsch` / `Français`)**:
   - Automatically detects *Dyson Sphere Program*'s active game language (`Localization.CurrentLanguageLCID`) and translates the entire Stellogistics Starmap UI, Galaxy Finder, `Filter ▾` / `Options ▾` menus, and Custom Picker.
