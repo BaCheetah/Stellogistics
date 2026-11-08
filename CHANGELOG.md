@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.1
+- **Automatic Multi-Language Localization (`简体中文` / `日本語` / `English` / `Deutsch` / `Français`)**:
+  - Automatically detects *Dyson Sphere Program*'s active game language (`Localization.CurrentLanguageLCID`) and translates the entire Stellogistics Starmap UI, Galaxy Finder, `Filter ▾` / `Options ▾` menus, and Custom Picker.
+  - Supports instant live language switching in the game settings without restarting and adjusts row text truncation widths for CJK characters (`简体中文` & `日本語`).
+  - **简体中文**: 自动识别游戏语言并完整支持简体中文界面（星图行星/星系星际物流进出口汇总、全星区物品与瓶颈查找器、配方原料追溯及自定义筛选器）。
+  - **日本語**: ゲームの言語設定を自動検出し、日本語UIに完全対応（星図での惑星・星系別ILS輸出入集計、銀河全体のアイテム＆ボトルネック検索、レシピ原料の逆引き追跡、カスタムフィルタ）。
+
 ## 2.2.0
 - **Upstream Recipe Chain Navigation in Finder (Click Item Icon)**:
   - Clicking any craftable item's icon on a Finder row dynamically queries *Dyson Sphere Program*'s `LDB` recipe tables (`maincraft` & alternate recipes) and automatically filters the Finder to that item's source ingredients (e.g., clicking *Proliferator Mk.III* filters to *Proliferator Mk.II + Carbon Nanotube*).

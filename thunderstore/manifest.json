@@ -1,8 +1,8 @@
 {
   "name": "Stellogistics",
-  "version_number": "2.2.0",
+  "version_number": "2.2.1",
   "website_url": "https://github.com/BaCheetah/Stellogistics",
-  "description": "Combined Starmap ILS & Orbital Collector Imports/Exports per Planet & Star System, plus a Galaxy Item & Bottleneck Finder with Starmap focus & navigation pin.",
+  "description": "[中文/日本語/EN/DE/FR] Starmap ILS Imports/Exports per Planet & Star + Galaxy Bottleneck Finder. 星图物流汇总与全星区瓶颈查找 / 星図ILS輸出入集計＆ボトルネック検索",
   "dependencies": [
     "xiaoye97-BepInEx-5.4.17"
   ]

@@ -2,11 +2,55 @@
 
 # Stellogistics
 
+> 🌐 **Supported Languages / 支持语言 / 対応言語**: **简体中文** • **日本語** • **English** • **Deutsch** • **Français** *(Automatically adapts to your in-game language / 自动匹配游戏语言 / ゲーム内言語に自動対応)*
+
 **Stop hunting through dozens of individual ILS towers to figure out why your factory stalled.**
 
 **Stellogistics** is a quality-of-life mod for *Dyson Sphere Program* (BepInEx 5) that adds an interactive, customizable **Interstellar Logistics Overview Panel** directly onto the Starmap. Instead of inspecting Interplanetary Logistics Stations (ILS) one by one, Stellogistics aggregates every remote supply and demand slot across an entire **Planet** or **Star System** into a single, combined **Exports** and **Imports** dashboard.
 
 - **Source Code**: https://github.com/BaCheetah/Stellogistics
+
+---
+
+## 🇨🇳 简体中文说明 (Simplified Chinese Overview)
+
+**告别逐个点击几十座星际物流塔来排查产线停工的原因！**
+
+**Stellogistics** 是一款《戴森球计划》实用辅助 Mod（基于 BepInEx 5），它在**星图 (Starmap)** 界面直接提供了一个可自由拖动、缩放与筛选的**星际物流概览面板**。Mod 会自动识别游戏的语言设置并切换为**简体中文界面**。
+
+### 核心功能：
+1. **行星与星系进出口汇总**：
+   - 将整个**行星**或整个**星系**内所有星际物流运输站（ILS）及气态巨星轨道采集器（OC）的远程供应（**出口**）和远程需求（**进口**）合并为清晰的列表。
+   - 直观显示 `当前库存 / 最大容量`、填充百分比、**斜纹在途货物条 (`+在途`)**、飞船状态（点击顶栏可切换显示 `航行中` 或 `空闲` 运输船）以及空间翘曲器储备。
+2. **全星区物品与瓶颈查找器 (`查找`)**：
+   - **全星区检索与缺货扫描**：一键查找整个星区中哪些行星在出口或进口指定物品；开启 **`筛选 ▾`** 中的 `排除 >40% (健康)` 即可快速扫描全星区的断供/空仓瓶颈（`空仓 0%`、`断供 0%`、`偏低`）。
+   - **点击定位与导航指引**：在查找结果中点击任意行星行，星图会自动聚焦到该行星并设置黄色导航指示线。
+   - **配方原料一键追溯（点击物品图标）**：在查找列表中点击任意合成物品的**图标**，会自动筛选出制作该物品所需的上游原料（支持通过 **`← 返回`** 逐层回退历史记录）。
+3. **智能瓶颈与中转站识别**：
+   - **运输船/物流塔吞吐瓶颈提示 (`⚡+ILS`)**：当某行星进口槽位处于缺货状态且在途飞船不足，但星区其他行星有充足库存可供应时，自动标记 `⚡+ILS`，提示你需要增加进口物流塔或运输船，而非盲目扩建产能。
+   - **中转枢纽识别 (`⇄ 中转`)**：自动识别同时进口和出口同一种物品的行星或星系。
+   - **星系智能筛选 (`仅星际` / `净差值` / `全部槽位`)**：查看整个星系时，可自动过滤掉仅在星系内部流转的本地运输，只看真正的跨星系进出口。
+
+---
+
+## 🇯🇵 日本語ガイド (Japanese Overview)
+
+**工場が止まった原因を探すために、何十基もの星間物流ステーション（ILS）を1つずつクリックする必要はもうありません！**
+
+**Stellogistics** は、『Dyson Sphere Program』の**星図（Starmap）**上に、惑星および星系全体の星間物流（輸出・輸入）を一括表示するインタラクティブなダッシュボードを追加する QoL Mod（BepInEx 5 対応）です。ゲーム内の言語設定を自動検出し、**日本語 UI** でそのまま快適にご利用いただけます。
+
+### 主な機能：
+1. **惑星・星系ごとの輸出入を一括集計**：
+   - 選択した**惑星**または**星系**全体の星間物流ステーション（ILS）および軌道コレクター（OC）のリモート供給（**輸出**）・リモート需要（**輸入**）をアイテムごとに1行に集約します。
+   - `現在量 / 最大容量`、充填率（%）、**斜線バーによる輸送中貨物量（`+輸送中`）**、稼働中/待機中の輸送船数（ヘッダークリックで切替）、スペースワーパーの在庫を一目で確認できます。
+2. **銀河全体のアイテム＆ボトルネック検索 (`検索`)**：
+   - **全星系スキャン＆不足箇所の特定**：特定のアイテムを輸出・輸入しているすべての惑星を瞬時にリストアップ。**`フィルタ ▾`** で `>40% を除外 (正常)` を有効にすれば、銀河全体で枯渇・不足しているボトルネック（`枯渇 0%`、`不足 0%`、`低下`）だけを抽出できます。
+   - **ワンクリックで星図フォーカス＆ナビ設定**：検索結果の惑星行をクリックすると、星図がその惑星にフォーカスし、ナビゲーションライン（黄色い誘導線）が設定されます。
+   - **レシピ原料の逆引き追跡（アイテムアイコンをクリック）**：検索リスト内のアイテム**アイコン**をクリックすると、そのアイテムをクラフトするための原料アイテムに自動でフィルタが切り替わります（**`← 戻る`** で履歴を1段階ずつ戻れます）。
+3. **スループット不足＆ハブ惑星の自動検知**：
+   - **輸送能力ボトルネック表示 (`⚡+ILS`)**：輸入側が不足しており輸送中の船を含めても容量が埋まらない一方、他の惑星に十分な輸出在庫がある場合に `⚡+ILS` を表示。「生産不足ではなく、ILSまたは輸送船の追加が必要」と即座に判別できます。
+   - **ハブ検知 (`⇄ ハブ`)**：同じアイテムを輸出・輸入の両方で扱っている中継惑星を自動表示します。
+   - **星系フィルタモード (`星間のみ` / `純収支` / `全スロット`)**：星系全体を表示中、星系内だけで完結しているローカル輸送を除外し、純粋な星間輸出入のみを表示できます。
 
 ---
 
@@ -97,7 +141,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.2.0.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.2.1.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.2.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.2.1.zip` as a local mod in Thunderstore Mod Manager / r2modman).
