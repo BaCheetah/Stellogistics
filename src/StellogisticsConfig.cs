@@ -35,6 +35,13 @@ namespace Stellogistics
         Healthy = 2   // Exclude Healthy (> WarningThreshold)
     }
 
+    public enum ECategoryFilterState
+    {
+        Unchecked = 0,
+        Partial = 1,
+        Checked = 2
+    }
+
     [Flags]
     public enum EItemCategoryFilter
     {
@@ -473,23 +480,75 @@ namespace Stellogistics
         public void SetCustomItemsAllVisible(bool visible)
         {
             HashSet<int> hiddenItems = EnsureHiddenItemsSet();
+            EItemCategoryFilter existingExclude = _categoryMask & EItemCategoryFilter.Exclude100Percent;
             if (visible)
             {
                 hiddenItems.Clear();
+                _categoryMask = EItemCategoryFilter.All | existingExclude;
             }
-            else if (LDB.items?.dataArray != null)
+            else
             {
-                ItemProto[] allProtos = LDB.items.dataArray;
-                for (int i = 0; i < allProtos.Length; i++)
+                _categoryMask = existingExclude;
+                if (LDB.items?.dataArray != null)
                 {
-                    ItemProto proto = allProtos[i];
-                    if (proto != null && proto.ID > 0)
+                    ItemProto[] allProtos = LDB.items.dataArray;
+                    for (int i = 0; i < allProtos.Length; i++)
                     {
-                        hiddenItems.Add(proto.ID);
+                        ItemProto proto = allProtos[i];
+                        if (proto != null && proto.ID > 0)
+                        {
+                            hiddenItems.Add(proto.ID);
+                        }
                     }
                 }
             }
             FlushFilterAndSave();
+        }
+
+        public ECategoryFilterState GetCategoryFilterState(EItemCategoryFilter category)
+        {
+            if (category == EItemCategoryFilter.Exclude100Percent)
+            {
+                return ExcludeEnabled ? ECategoryFilterState.Checked : ECategoryFilterState.Unchecked;
+            }
+
+            if (!_hiddenItemsInitialized || LDB.items?.dataArray == null)
+            {
+                return (_categoryMask & category) != 0
+                    ? ECategoryFilterState.Checked
+                    : ECategoryFilterState.Unchecked;
+            }
+
+            int total = 0;
+            int visible = 0;
+            ItemProto[] allProtos = LDB.items.dataArray;
+            for (int i = 0; i < allProtos.Length; i++)
+            {
+                ItemProto proto = allProtos[i];
+                if (proto == null || proto.ID <= 0)
+                {
+                    continue;
+                }
+                if (CombinedLogisticsItem.ClassifyItem(proto) != category)
+                {
+                    continue;
+                }
+                total++;
+                if (!_hiddenItems.Contains(proto.ID))
+                {
+                    visible++;
+                }
+            }
+
+            if (total == 0 || visible == 0)
+            {
+                return ECategoryFilterState.Unchecked;
+            }
+            if (visible == total)
+            {
+                return ECategoryFilterState.Checked;
+            }
+            return ECategoryFilterState.Partial;
         }
 
         public void ResetFilter()

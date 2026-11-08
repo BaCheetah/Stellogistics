@@ -82,12 +82,38 @@ namespace Stellogistics
         private static void SetCheckboxVisual(CheckboxToggleRow row, bool enabled, Color? customActiveLabelColor = null)
         {
             row.CheckMarkText.text = enabled ? "✓" : "";
+            row.CheckMarkText.color = HealthyColor;
             row.CheckBoxBg.color = enabled
                 ? new Color(0.18f, 0.42f, 0.62f, 1f)
                 : new Color(0.12f, 0.16f, 0.22f, 1f);
             row.LabelText.color = enabled
                 ? (customActiveLabelColor ?? new Color(0.92f, 0.96f, 1f, 1f))
                 : new Color(0.50f, 0.58f, 0.68f, 0.85f);
+        }
+
+        private static void SetCheckboxVisual(CheckboxToggleRow row, ECategoryFilterState state)
+        {
+            switch (state)
+            {
+                case ECategoryFilterState.Checked:
+                    row.CheckMarkText.text = "✓";
+                    row.CheckMarkText.color = HealthyColor;
+                    row.CheckBoxBg.color = new Color(0.18f, 0.42f, 0.62f, 1f);
+                    row.LabelText.color = new Color(0.92f, 0.96f, 1f, 1f);
+                    break;
+                case ECategoryFilterState.Partial:
+                    row.CheckMarkText.text = "–";
+                    row.CheckMarkText.color = WarningColor;
+                    row.CheckBoxBg.color = new Color(0.22f, 0.34f, 0.48f, 1f);
+                    row.LabelText.color = new Color(0.92f, 0.96f, 1f, 1f);
+                    break;
+                default:
+                    row.CheckMarkText.text = "";
+                    row.CheckMarkText.color = HealthyColor;
+                    row.CheckBoxBg.color = new Color(0.12f, 0.16f, 0.22f, 1f);
+                    row.LabelText.color = new Color(0.50f, 0.58f, 0.68f, 0.85f);
+                    break;
+            }
         }
 
         private void BuildOptionsMenu()
@@ -574,10 +600,12 @@ namespace Stellogistics
             }
 
             _finderFocusItemId = 0;
+            ECategoryFilterState currentState = _config.GetCategoryFilterState(category);
+            bool enableCategory = currentState != ECategoryFilterState.Checked;
             EItemCategoryFilter current = _config.CategoryFilter;
-            EItemCategoryFilter updated = (current & category) != 0
-                ? (current & ~category)
-                : (current | category);
+            EItemCategoryFilter updated = enableCategory
+                ? (current | category)
+                : (current & ~category);
 
             _config.SetCategoryFilter(updated, category);
             RefreshOptionsMenuState();
@@ -592,7 +620,6 @@ namespace Stellogistics
                 return;
             }
 
-            EItemCategoryFilter mask = _config.CategoryFilter;
             _optionsTargetLabel.text = _config.HasCustomFilter
                 ? "Global Filter (Active across Starmap)"
                 : "Global Filter (All Shown)";
@@ -620,7 +647,7 @@ namespace Stellogistics
             for (int i = 0; i < _filterToggles.Count; i++)
             {
                 CheckboxToggleRow row = _filterToggles[i];
-                SetCheckboxVisual(row, (mask & row.Category) != 0);
+                SetCheckboxVisual(row, _config.GetCategoryFilterState(row.Category));
             }
 
             if (_ignoreTargetToggleRow != null)
