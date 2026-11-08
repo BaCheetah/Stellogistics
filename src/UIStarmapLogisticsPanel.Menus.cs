@@ -211,6 +211,7 @@ namespace Stellogistics
             resetFiltersBtn.onClick.AddListener(() =>
             {
                 _finderFocusItemId = 0;
+                _finderHistoryStack.Clear();
                 _config.ResetFilter();
                 RefreshOptionsMenuState();
                 RefreshCustomPickerCells();
@@ -415,28 +416,28 @@ namespace Stellogistics
         private void OnFilterModeButtonClicked()
         {
             CloseDropdownMenus();
+            if (_finderModeActive)
+            {
+                ExitFinderToPlanetOverview();
+                return;
+            }
+
             int next = ((int)_config.StarSystemFilterMode.Value + 1) % 3;
             _config.StarSystemFilterMode.Value = (EStarFilterMode)next;
             _config.Save();
             _forceRefresh = true;
         }
 
-        private void ReturnToFinderOverview()
+        private void ExitFinderToPlanetOverview()
         {
-            if (_finderFocusItemId > 0)
+            if (_finderHistoryStack.Count > 0)
             {
-                _finderFocusItemId = 0;
-            }
-            else if (_config.HasTemporaryFilterSnapshot)
-            {
-                _config.RestoreFilterSnapshot();
-            }
-            else
-            {
-                _config.SetCustomItemsAllVisible(true);
+                _config.ApplyFilterSnapshot(_finderHistoryStack[0].Filter);
+                _finderHistoryStack.Clear();
             }
 
-            _finderModeActive = true;
+            _finderModeActive = false;
+            _finderFocusItemId = 0;
             if (_customPickerOpen)
             {
                 SetCustomPickerTab(_customPickerActiveTab);
@@ -454,29 +455,46 @@ namespace Stellogistics
             CloseDropdownMenus();
             if (_finderModeActive)
             {
-                if (_finderFocusItemId > 0 || (_lastFinderCheckedCount == 1 && !_config.HasTemporaryFilterSnapshot))
+                if (_finderHistoryStack.Count > 0)
                 {
-                    ReturnToFinderOverview();
+                    int lastIdx = _finderHistoryStack.Count - 1;
+                    FinderHistoryEntry prev = _finderHistoryStack[lastIdx];
+                    _finderHistoryStack.RemoveAt(lastIdx);
+
+                    _finderFocusItemId = prev.FocusItemId;
+                    _config.ApplyFilterSnapshot(prev.Filter);
+                    _finderModeActive = true;
+                    if (_customPickerOpen)
+                    {
+                        SetCustomPickerTab(_customPickerActiveTab);
+                    }
+                    RefreshOptionsMenuState();
+                    if (_scrollRect != null)
+                    {
+                        _scrollRect.verticalNormalizedPosition = 1f;
+                    }
+                    _forceRefresh = true;
                     return;
                 }
 
-                if (_config.HasTemporaryFilterSnapshot)
+                if (_finderFocusItemId > 0)
                 {
-                    _config.RestoreFilterSnapshot();
+                    _finderFocusItemId = 0;
+                    _finderModeActive = true;
+                    if (_customPickerOpen)
+                    {
+                        SetCustomPickerTab(_customPickerActiveTab);
+                    }
                     RefreshOptionsMenuState();
+                    if (_scrollRect != null)
+                    {
+                        _scrollRect.verticalNormalizedPosition = 1f;
+                    }
+                    _forceRefresh = true;
+                    return;
                 }
 
-                _finderModeActive = false;
-                _finderFocusItemId = 0;
-                if (_customPickerOpen)
-                {
-                    SetCustomPickerTab(_customPickerActiveTab);
-                }
-                if (_scrollRect != null)
-                {
-                    _scrollRect.verticalNormalizedPosition = 1f;
-                }
-                _forceRefresh = true;
+                ExitFinderToPlanetOverview();
                 return;
             }
 
@@ -486,6 +504,7 @@ namespace Stellogistics
                 _panelCollapseBtnText.text = "▼";
             }
 
+            _finderHistoryStack.Clear();
             _finderModeActive = true;
             if (_customPickerOpen)
             {

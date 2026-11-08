@@ -167,10 +167,21 @@ namespace Stellogistics
 
         private readonly List<ItemRowView> _rowPool = new List<ItemRowView>();
 
+        private struct FinderHistoryEntry
+        {
+            public int FocusItemId;
+            public FilterSnapshot Filter;
+        }
+
         private UIStarmap _currentStarmap;
         private bool _finderModeActive = false;
         private int _finderFocusItemId = 0;
         private int _lastFinderCheckedCount = 0;
+        private readonly List<FinderHistoryEntry> _finderHistoryStack = new List<FinderHistoryEntry>();
+
+        private bool ShowFifthHeaderButton => _finderModeActive
+            ? (_finderHistoryStack.Count > 0 || _finderFocusItemId > 0)
+            : (_lastResolvedStar != null && _lastResolvedPlanet == null);
 
         private int _lastTargetAstroId = -1;
         private int _lastGalaxySeed = 0;
@@ -265,6 +276,7 @@ namespace Stellogistics
                 _lastResolvedPlanet = null;
                 _lastResolvedStar = null;
                 _finderFocusItemId = 0;
+                _finderHistoryStack.Clear();
                 LogisticsAggregator.InvalidateCaches();
             }
             RequestImmediateRefresh();
@@ -320,6 +332,7 @@ namespace Stellogistics
                 _lastResolvedPlanet = null;
                 _lastResolvedStar = null;
                 _finderFocusItemId = 0;
+                _finderHistoryStack.Clear();
                 LogisticsAggregator.InvalidateCaches();
                 _forceRefresh = true;
             }

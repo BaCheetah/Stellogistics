@@ -309,7 +309,7 @@ namespace Stellogistics
                 }
 
                 _livePanelWidth = newW;
-                bool showFifthBtn = !_finderModeActive && (_lastResolvedStar != null && _lastResolvedPlanet == null);
+                bool showFifthBtn = ShowFifthHeaderButton;
                 float activeHeaderH = ApplyHeaderLayout(_livePanelWidth, showFifthBtn);
                 float clampedViewportH = Mathf.Clamp(newTotalH - activeHeaderH, 82f, 950f);
                 _livePanelMaxHeight = clampedViewportH;
@@ -407,7 +407,7 @@ namespace Stellogistics
                 return;
             }
 
-            bool showFifthBtn = !_finderModeActive && (_lastResolvedStar != null && _lastResolvedPlanet == null);
+            bool showFifthBtn = ShowFifthHeaderButton;
             float activeHeaderH = ApplyHeaderLayout(panelWidth, showFifthBtn);
 
             bool bothMenusCollapsed = _exportsCollapsed && _importsCollapsed;
@@ -646,6 +646,15 @@ namespace Stellogistics
             return view;
         }
 
+        private void PushFinderHistoryState()
+        {
+            _finderHistoryStack.Add(new FinderHistoryEntry
+            {
+                FocusItemId = _finderFocusItemId,
+                Filter = _config.CreateFilterSnapshot()
+            });
+        }
+
         private void OnBoundRowIconClicked(ItemRowView row)
         {
             CloseDropdownMenus();
@@ -661,9 +670,9 @@ namespace Stellogistics
                 return;
             }
 
+            PushFinderHistoryState();
             _finderFocusItemId = 0;
             _finderModeActive = true;
-            _config.SaveFilterSnapshotIfNone();
             _config.SetOnlyItemsVisible(sourceIds);
 
             RefreshCustomPickerCells();
@@ -683,6 +692,7 @@ namespace Stellogistics
             {
                 if (row.BoundIsBottleneckScan && row.BoundItemId > 0)
                 {
+                    PushFinderHistoryState();
                     _finderFocusItemId = row.BoundItemId;
                     if (_scrollRect != null)
                     {
@@ -694,6 +704,7 @@ namespace Stellogistics
             }
             else if (row.BoundItemId > 0)
             {
+                _finderHistoryStack.Clear();
                 _finderModeActive = true;
                 _finderFocusItemId = row.BoundItemId;
                 if (_scrollRect != null)
