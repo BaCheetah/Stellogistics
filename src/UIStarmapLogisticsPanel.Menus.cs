@@ -427,6 +427,10 @@ namespace Stellogistics
             {
                 _finderFocusItemId = 0;
             }
+            else if (_config.HasTemporaryFilterSnapshot)
+            {
+                _config.RestoreFilterSnapshot();
+            }
             else
             {
                 _config.SetCustomItemsAllVisible(true);
@@ -450,10 +454,16 @@ namespace Stellogistics
             CloseDropdownMenus();
             if (_finderModeActive)
             {
-                if (_finderFocusItemId > 0 || _lastFinderCheckedCount == 1)
+                if (_finderFocusItemId > 0 || (_lastFinderCheckedCount == 1 && !_config.HasTemporaryFilterSnapshot))
                 {
                     ReturnToFinderOverview();
                     return;
+                }
+
+                if (_config.HasTemporaryFilterSnapshot)
+                {
+                    _config.RestoreFilterSnapshot();
+                    RefreshOptionsMenuState();
                 }
 
                 _finderModeActive = false;

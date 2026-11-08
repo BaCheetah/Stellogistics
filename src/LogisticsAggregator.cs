@@ -31,6 +31,9 @@ namespace Stellogistics
         private static float _storedIdsCacheExpiryTime = -1f;
         private static int _storedIdsCachedSeed = -1;
 
+        // Cached recipe source ingredient IDs per output item ID
+        private static readonly Dictionary<int, List<int>> _cachedSourceIngredients = new Dictionary<int, List<int>>();
+
         // Cached galaxy supply availability (TTL 1.0s)
         private static readonly Dictionary<int, SupplyAvailability> _cachedSupplyAvailability = new Dictionary<int, SupplyAvailability>();
         private static float _supplyCacheExpiryTime = -1f;
@@ -915,6 +918,97 @@ namespace Stellogistics
             result.UnionWith(_cachedStoredIds);
         }
 
+        public static bool HasSourceIngredients(int itemId)
+        {
+            List<int> sources = GetSourceIngredientIds(itemId);
+            return sources != null && sources.Count > 0;
+        }
+
+        public static List<int> GetSourceIngredientIds(int itemId)
+        {
+            if (itemId <= 0 || LDB.items == null)
+            {
+                return null;
+            }
+
+            if (_cachedSourceIngredients.TryGetValue(itemId, out List<int> cached))
+            {
+                return cached;
+            }
+
+            ItemProto proto = LDB.items.Select(itemId);
+            if (proto == null)
+            {
+                return null;
+            }
+
+            var result = new List<int>();
+            var seen = new HashSet<int>();
+
+            // 1. Primary recipe (maincraft) first
+            if (proto.maincraft?.Items != null && Array.IndexOf(proto.maincraft.Items, itemId) < 0)
+            {
+                for (int i = 0; i < proto.maincraft.Items.Length; i++)
+                {
+                    int ingId = proto.maincraft.Items[i];
+                    if (ingId > 0 && ingId != itemId && seen.Add(ingId))
+                    {
+                        result.Add(ingId);
+                    }
+                }
+            }
+
+            // 2. Any additional recipes in proto.recipes (e.g. alternate rare-resource recipes)
+            if (proto.recipes != null)
+            {
+                for (int r = 0; r < proto.recipes.Count; r++)
+                {
+                    RecipeProto recipe = proto.recipes[r];
+                    if (recipe?.Items == null || Array.IndexOf(recipe.Items, itemId) >= 0)
+                    {
+                        continue;
+                    }
+                    for (int i = 0; i < recipe.Items.Length; i++)
+                    {
+                        int ingId = recipe.Items[i];
+                        if (ingId > 0 && ingId != itemId && seen.Add(ingId))
+                        {
+                            result.Add(ingId);
+                        }
+                    }
+                }
+            }
+
+            // 3. Fallback: scan LDB.recipes if neither maincraft nor proto.recipes was populated
+            if (result.Count == 0 && LDB.recipes?.dataArray != null)
+            {
+                RecipeProto[] allRecipes = LDB.recipes.dataArray;
+                for (int r = 0; r < allRecipes.Length; r++)
+                {
+                    RecipeProto recipe = allRecipes[r];
+                    if (recipe?.Results == null || recipe.Items == null)
+                    {
+                        continue;
+                    }
+                    if (Array.IndexOf(recipe.Results, itemId) < 0 || Array.IndexOf(recipe.Items, itemId) >= 0)
+                    {
+                        continue;
+                    }
+                    for (int i = 0; i < recipe.Items.Length; i++)
+                    {
+                        int ingId = recipe.Items[i];
+                        if (ingId > 0 && ingId != itemId && seen.Add(ingId))
+                        {
+                            result.Add(ingId);
+                        }
+                    }
+                }
+            }
+
+            _cachedSourceIngredients[itemId] = result;
+            return result;
+        }
+
         public static GalaxyItemSearchSummary ScanGalaxyFinder(StellogisticsConfig config, int focusItemId = 0)
         {
             int galaxySeed = GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
@@ -925,6 +1019,7 @@ namespace Stellogistics
             int checkedCount = 0;
             int singleItemId = -1;
             ItemProto singleProto = null;
+            List<string> shortCheckedNames = null;
 
             if (focusItemId > 0)
             {
@@ -959,6 +1054,58 @@ namespace Stellogistics
                         }
                     }
                 }
+
+                // Also check LDB when a small set of specific items (e.g. recipe sources) is selected,
+                // even if one of the ingredients isn't currently stored in a container yet.
+                if (LDB.items?.dataArray != null)
+                {
+                    int ldbVisibleCount = 0;
+                    int ldbSingleId = -1;
+                    ItemProto ldbSingleProto = null;
+                    var ldbNames = new List<string>(4);
+                    ItemProto[] allProtos = LDB.items.dataArray;
+                    for (int i = 0; i < allProtos.Length; i++)
+                    {
+                        ItemProto proto = allProtos[i];
+                        if (proto == null || proto.ID <= 0 || proto.GridIndex <= 0)
+                        {
+                            continue;
+                        }
+                        EItemCategoryFilter cat = CombinedLogisticsItem.ClassifyItem(proto);
+                        if (config.IsItemVisible(proto.ID, cat))
+                        {
+                            ldbVisibleCount++;
+                            if (ldbVisibleCount == 1)
+                            {
+                                ldbSingleId = proto.ID;
+                                ldbSingleProto = proto;
+                            }
+                            if (ldbVisibleCount <= 3 && !string.IsNullOrEmpty(proto.name))
+                            {
+                                ldbNames.Add(proto.name);
+                            }
+                        }
+                    }
+
+                    if (ldbVisibleCount > 0 && ldbVisibleCount <= 3)
+                    {
+                        shortCheckedNames = ldbNames;
+                    }
+                    if (ldbVisibleCount > 0 && ldbVisibleCount <= 6 && ldbVisibleCount > checkedCount)
+                    {
+                        checkedCount = ldbVisibleCount;
+                        if (checkedCount == 1)
+                        {
+                            singleItemId = ldbSingleId;
+                            singleProto = ldbSingleProto;
+                        }
+                        else
+                        {
+                            singleItemId = -1;
+                            singleProto = null;
+                        }
+                    }
+                }
             }
 
             bool includeCollectors = config.IncludeOrbitalCollectors.Value;
@@ -974,6 +1121,10 @@ namespace Stellogistics
             else if (singleItemId > 0)
             {
                 summaryTitle = singleProto != null ? singleProto.name : $"Item #{singleItemId}";
+            }
+            else if (shortCheckedNames != null && shortCheckedNames.Count > 1)
+            {
+                summaryTitle = string.Join(" + ", shortCheckedNames.ToArray());
             }
             else if (onlyBottlenecks)
             {

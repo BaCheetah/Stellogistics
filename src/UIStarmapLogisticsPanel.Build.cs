@@ -547,6 +547,8 @@ namespace Stellogistics
             Image iconImg = UIHelpers.CreateImage("Icon", rowRect, Color.white, false, out RectTransform iconRect);
             iconRect.SetRect(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f), new Vector2(28f, 28f));
             iconImg.preserveAspect = true;
+            PointerClickHandler iconClick = iconImg.gameObject.AddComponent<PointerClickHandler>();
+            ItemCellHoverHandler iconHover = iconImg.gameObject.AddComponent<ItemCellHoverHandler>();
 
             Text nameText = CreateText("NameText", rowRect, 12, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.95f, 0.98f, 1f, 1f));
             nameText.rectTransform.anchorMin = new Vector2(0f, 0.5f);
@@ -626,9 +628,52 @@ namespace Stellogistics
             muteHover.OnHoverEnter = () => ApplyRowMuteAnimationState(view);
             muteHover.OnHoverExit = () => ApplyRowMuteAnimationState(view);
 
+            iconHover.OnHoverEnter = () =>
+            {
+                if (view.BoundIsFinderRow && view.IconImage.raycastTarget)
+                {
+                    view.IconImage.rectTransform.localScale = new Vector3(1.16f, 1.16f, 1f);
+                }
+            };
+            iconHover.OnHoverExit = () =>
+            {
+                view.IconImage.rectTransform.localScale = Vector3.one;
+            };
+            iconClick.OnClick = () => OnBoundRowIconClicked(view);
+
             rowBtn.onClick.AddListener(() => OnBoundRowClicked(view));
             muteBtn.onClick.AddListener(() => OnBoundRowMuteClicked(view));
             return view;
+        }
+
+        private void OnBoundRowIconClicked(ItemRowView row)
+        {
+            CloseDropdownMenus();
+            row.IconImage.rectTransform.localScale = Vector3.one;
+            if (!row.BoundIsFinderRow || row.BoundItemId <= 0)
+            {
+                return;
+            }
+
+            System.Collections.Generic.List<int> sourceIds = LogisticsAggregator.GetSourceIngredientIds(row.BoundItemId);
+            if (sourceIds == null || sourceIds.Count == 0)
+            {
+                return;
+            }
+
+            _finderFocusItemId = 0;
+            _finderModeActive = true;
+            _config.SaveFilterSnapshotIfNone();
+            _config.SetOnlyItemsVisible(sourceIds);
+
+            RefreshCustomPickerCells();
+            RefreshOptionsMenuState();
+
+            if (_scrollRect != null)
+            {
+                _scrollRect.verticalNormalizedPosition = 1f;
+            }
+            _forceRefresh = true;
         }
 
         private void OnBoundRowClicked(ItemRowView row)

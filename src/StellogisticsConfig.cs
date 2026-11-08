@@ -91,6 +91,10 @@ namespace Stellogistics
         private EItemCategoryFilter _categoryMask;
         private readonly HashSet<int> _hiddenItems = new HashSet<int>();
         private bool _hiddenItemsInitialized;
+        private bool _hasSavedFilterSnapshot;
+        private EItemCategoryFilter _snapshotCategoryMask;
+        private readonly HashSet<int> _snapshotHiddenItems = new HashSet<int>();
+        private bool _snapshotHiddenItemsInitialized;
         private readonly Dictionary<int, HashSet<int>> _ignoredAstrosBySeed = new Dictionary<int, HashSet<int>>();
 
         public StellogisticsConfig(ConfigFile config)
@@ -414,6 +418,41 @@ namespace Stellogistics
 
         public bool HasCustomFilter => _categoryMask != EItemCategoryFilter.All || _hiddenItems.Count > 0;
 
+        public bool HasTemporaryFilterSnapshot => _hasSavedFilterSnapshot;
+
+        public void SaveFilterSnapshotIfNone()
+        {
+            if (_hasSavedFilterSnapshot)
+            {
+                return;
+            }
+            _hasSavedFilterSnapshot = true;
+            _snapshotCategoryMask = _categoryMask;
+            _snapshotHiddenItemsInitialized = _hiddenItemsInitialized;
+            _snapshotHiddenItems.Clear();
+            _snapshotHiddenItems.UnionWith(_hiddenItems);
+        }
+
+        public void RestoreFilterSnapshot()
+        {
+            if (!_hasSavedFilterSnapshot)
+            {
+                return;
+            }
+            _hasSavedFilterSnapshot = false;
+            _categoryMask = _snapshotCategoryMask;
+            _hiddenItemsInitialized = _snapshotHiddenItemsInitialized;
+            _hiddenItems.Clear();
+            _hiddenItems.UnionWith(_snapshotHiddenItems);
+            FlushFilterAndSave();
+        }
+
+        public void ClearFilterSnapshot()
+        {
+            _hasSavedFilterSnapshot = false;
+            _snapshotHiddenItems.Clear();
+        }
+
         private HashSet<int> EnsureHiddenItemsSet()
         {
             if (!_hiddenItemsInitialized)
@@ -444,6 +483,7 @@ namespace Stellogistics
 
         public void SetCategoryFilter(EItemCategoryFilter mask, EItemCategoryFilter? toggledCategories = null)
         {
+            ClearFilterSnapshot();
             HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             EItemCategoryFilter existingExclude = _categoryMask & EItemCategoryFilter.Exclude100Percent;
             _categoryMask = (mask & EItemCategoryFilter.All) | existingExclude;
@@ -479,6 +519,7 @@ namespace Stellogistics
 
         public void SetCustomItemsAllVisible(bool visible)
         {
+            ClearFilterSnapshot();
             HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             EItemCategoryFilter existingExclude = _categoryMask & EItemCategoryFilter.Exclude100Percent;
             if (visible)
@@ -502,6 +543,50 @@ namespace Stellogistics
                     }
                 }
             }
+            FlushFilterAndSave();
+        }
+
+        public void SetOnlyItemsVisible(IEnumerable<int> visibleItemIds)
+        {
+            HashSet<int> hiddenItems = EnsureHiddenItemsSet();
+            hiddenItems.Clear();
+
+            var keep = new HashSet<int>();
+            if (visibleItemIds != null)
+            {
+                foreach (int id in visibleItemIds)
+                {
+                    if (id > 0)
+                    {
+                        keep.Add(id);
+                    }
+                }
+            }
+
+            EItemCategoryFilter activeCategories = EItemCategoryFilter.None;
+            if (LDB.items?.dataArray != null)
+            {
+                ItemProto[] allProtos = LDB.items.dataArray;
+                for (int i = 0; i < allProtos.Length; i++)
+                {
+                    ItemProto proto = allProtos[i];
+                    if (proto == null || proto.ID <= 0)
+                    {
+                        continue;
+                    }
+                    if (keep.Contains(proto.ID))
+                    {
+                        activeCategories |= CombinedLogisticsItem.ClassifyItem(proto);
+                    }
+                    else
+                    {
+                        hiddenItems.Add(proto.ID);
+                    }
+                }
+            }
+
+            EItemCategoryFilter existingExclude = _categoryMask & EItemCategoryFilter.Exclude100Percent;
+            _categoryMask = activeCategories | existingExclude;
             FlushFilterAndSave();
         }
 
@@ -553,6 +638,7 @@ namespace Stellogistics
 
         public void ResetFilter()
         {
+            ClearFilterSnapshot();
             _categoryMask = EItemCategoryFilter.All;
             _hiddenItems.Clear();
             _hiddenItemsInitialized = false;
@@ -574,6 +660,7 @@ namespace Stellogistics
             {
                 return;
             }
+            ClearFilterSnapshot();
             HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             if (!hiddenItems.Remove(itemId))
             {
@@ -588,6 +675,7 @@ namespace Stellogistics
             {
                 return;
             }
+            ClearFilterSnapshot();
             HashSet<int> hiddenItems = EnsureHiddenItemsSet();
             bool changed = visible ? hiddenItems.Remove(itemId) : hiddenItems.Add(itemId);
             if (changed)

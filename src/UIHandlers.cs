@@ -40,9 +40,17 @@ namespace Stellogistics
         }
     }
 
-    public class PointerClickHandler : MonoBehaviour, IPointerClickHandler
+    public class PointerClickHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
     {
         public Action OnClick;
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+        }
 
         public void OnPointerClick(PointerEventData eventData)
         {

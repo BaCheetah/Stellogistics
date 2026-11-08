@@ -249,7 +249,7 @@ namespace Stellogistics
 
             _finderModeBtn.gameObject.SetActive(true);
             _lastFinderCheckedCount = summary.CheckedItemCount;
-            bool isSingleItemFocused = summary.CheckedItemCount == 1;
+            bool isSingleItemFocused = _finderFocusItemId > 0 || (summary.CheckedItemCount == 1 && !_config.HasTemporaryFilterSnapshot);
             if (isSingleItemFocused)
             {
                 _finderModeBtnText.text = "← All";
@@ -279,7 +279,7 @@ namespace Stellogistics
             _subtitleText.text = (onlyBottlenecks && summary.CheckedItemCount != 1)
                 ? $"Galaxy Scan • {summary.ExportingPlanets.Count} Export / {summary.ImportingPlanets.Count} Import Alerts{ignoredSuffix}{pausedSuffix}"
                 : $"Galaxy Scan • {summary.ExportingPlanets.Count} Exporting • {summary.ImportingPlanets.Count} Importing{ignoredSuffix}{pausedSuffix}";
-            _fleetInfoText.text = "Click row to focus & pin • ✕ to hide item";
+            _fleetInfoText.text = "Click row: pin planet • Icon: sources • ✕: hide";
 
             _sortModeBtnText.text = GetSortLabel();
 
@@ -475,6 +475,8 @@ namespace Stellogistics
                 slotDesc = $"{slotDesc} • {FormatHubBadge(item)}";
             }
             row.MetaText.text = slotDesc;
+            row.IconImage.raycastTarget = false;
+            row.IconImage.rectTransform.localScale = Vector3.one;
 
             row.BoundItemId = item.ItemId;
             row.BoundPlanet = null;
@@ -492,6 +494,7 @@ namespace Stellogistics
         {
             CombinedLogisticsItem item = entry.Item;
             BindItemVisuals(row, item, critPct, warnPct);
+            row.IconImage.raycastTarget = LogisticsAggregator.HasSourceIngredients(item.ItemId);
 
             string rawName = isBottleneckScan
                 ? $"{entry.PlanetName} • {item.ItemName}"
