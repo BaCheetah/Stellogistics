@@ -829,6 +829,11 @@ namespace Stellogistics
 
         private void PrewarmAllPanelTexts()
         {
+            if (_gameFont == null)
+            {
+                _gameFont = ResolveCurrentGameFont();
+            }
+
             for (int i = _allPanelTexts.Count - 1; i >= 0; i--)
             {
                 TrackedPanelText entry = _allPanelTexts[i];
@@ -838,20 +843,15 @@ namespace Stellogistics
                     continue;
                 }
 
+                if (_gameFont != null && entry.Text.font != _gameFont)
+                {
+                    entry.Text.font = _gameFont;
+                }
+
                 FontStyle targetStyle = ModLocalization.EffectiveFontStyle(entry.BaseStyle);
                 if (entry.Text.fontStyle != targetStyle)
                 {
                     entry.Text.fontStyle = targetStyle;
-                }
-
-                if (!string.IsNullOrEmpty(entry.Text.text))
-                {
-                    // Querying preferredWidth outside CanvasUpdateRegistry.PerformUpdate() forces
-                    // DSP's custom Youthcat.TextGenerator to update m_LCID, resolve m_ReplacedFont
-                    // for the active language, and populate the dynamic font texture atlas while
-                    // IsRebuildingGraphics() is false (preventing re-entrant UpdateGeometry() calls
-                    // inside FontTextureChanged() from corrupting Graphic.workerMesh).
-                    _ = entry.Text.preferredWidth;
                 }
 
                 entry.Text.SetAllDirty();

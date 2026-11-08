@@ -262,13 +262,33 @@ namespace Stellogistics
         private Font ResolveCurrentGameFont()
         {
             Font font = null;
-            if (_uiGame?.planetDetail?.typeText != null)
+            if (_uiGame?.starmap?.cursorViewText != null)
+            {
+                font = _uiGame.starmap.cursorViewText.font;
+            }
+            if (font == null && _uiGame?.planetDetail?.typeText != null)
             {
                 font = _uiGame.planetDetail.typeText.font;
             }
-            else if (_uiGame?.starmap?.cursorViewText != null)
+            if (font == null && _uiGame?.controlPanelWindow != null)
             {
-                font = _uiGame.starmap.cursorViewText.font;
+                font = _uiGame.controlPanelWindow.FONT_SAIRASB;
+            }
+            if (font == null)
+            {
+                font = Resources.Load<Font>("UI/Fonts/SAIRASB");
+            }
+            if (font == null)
+            {
+                font = Resources.Load<Font>("UI/Fonts/SAIRAR");
+            }
+            if (font == null && Configs.builtin != null)
+            {
+                font = Configs.builtin.markerBreifInfoWordFont;
+            }
+            if (font == null)
+            {
+                font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             }
             if (font == null)
             {
@@ -371,6 +391,7 @@ namespace Stellogistics
             if (languageChanged)
             {
                 _lastLanguageLcid = currentLcid;
+                _gameFont = ResolveCurrentGameFont();
                 LogisticsAggregator.InvalidateCaches();
                 _forceRefresh = true;
                 _languageSwitchWarmupFrames = 3;

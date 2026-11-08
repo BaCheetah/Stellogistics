@@ -6,6 +6,7 @@ namespace Stellogistics
     public static class StarmapPatches
     {
         private static UIStarmapLogisticsPanel _panelInstance;
+        private static int _lastPanelLanguageLcid = -1;
 
         public static bool IsPointerOverPanel()
         {
@@ -14,6 +15,13 @@ namespace Stellogistics
 
         public static UIStarmapLogisticsPanel EnsurePanel(UIStarmap starmap)
         {
+            int currentLcid = Localization.CurrentLanguageLCID;
+            if (_panelInstance != null && _lastPanelLanguageLcid != -1 && currentLcid != _lastPanelLanguageLcid)
+            {
+                LogisticsAggregator.InvalidateCaches();
+                DestroyPanel();
+            }
+
             if (_panelInstance != null)
             {
                 return _panelInstance;
@@ -32,6 +40,7 @@ namespace Stellogistics
             panelGo.SetActive(false);
 
             _panelInstance = panelGo.AddComponent<UIStarmapLogisticsPanel>();
+            _lastPanelLanguageLcid = currentLcid;
             _panelInstance.Initialize(uiGame, StellogisticsPlugin.ModConfig);
 
             StellogisticsPlugin.Log?.LogInfo("Initialized Stellogistics Starmap sidebar panel.");
@@ -48,6 +57,7 @@ namespace Stellogistics
                 }
                 _panelInstance = null;
             }
+            _lastPanelLanguageLcid = -1;
         }
 
         [HarmonyPostfix]
