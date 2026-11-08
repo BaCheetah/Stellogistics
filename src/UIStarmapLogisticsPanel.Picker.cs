@@ -217,12 +217,18 @@ namespace Stellogistics
                         bool vis = _config.IsItemVisible(cellView.ItemId, cellView.Category);
                         _customPickerHoveredLabel.text = ModLocalization.PickerHoveredItemStatus(cellView.ItemName, vis);
                         _customPickerHoveredLabel.color = vis ? HealthyColor : WarningColor;
+                        _ = _customPickerHoveredLabel.preferredWidth;
+                        _customPickerHoveredLabel.SetAllDirty();
+                        _customPickerHoveredLabel.UpdateMaterial();
                     };
                     hover.OnHoverExit = () =>
                     {
                         if (_customPickerHoveredLabel == null) return;
                         _customPickerHoveredLabel.text = ModLocalization.PickerHoverDefaultItems;
                         _customPickerHoveredLabel.color = new Color(0.80f, 0.92f, 1f, 1f);
+                        _ = _customPickerHoveredLabel.preferredWidth;
+                        _customPickerHoveredLabel.SetAllDirty();
+                        _customPickerHoveredLabel.UpdateMaterial();
                     };
 
                     _customPickerCells.Add(cellView);
@@ -417,7 +423,7 @@ namespace Stellogistics
                     dispName = dispName.Substring(0, maxPlanetChars - 2) + "..";
                 }
                 row.NameText.text = dispName;
-                row.NameText.fontStyle = entry.IsStarSystem ? FontStyle.Bold : FontStyle.Normal;
+                row.NameText.fontStyle = ModLocalization.EffectiveFontStyle(entry.IsStarSystem ? FontStyle.Bold : FontStyle.Normal);
                 row.NameText.color = effectivelyIgnored
                     ? new Color(0.65f, 0.55f, 0.58f, 0.85f)
                     : (entry.IsStarSystem ? new Color(0.96f, 0.98f, 1f, 1f) : new Color(0.88f, 0.94f, 1f, 1f));
@@ -534,6 +540,7 @@ namespace Stellogistics
             {
                 RefreshCustomPickerCells();
             }
+            PrewarmAllPanelTexts();
         }
 
         private void OnCustomPickerItemClicked(int itemId, string itemName, EItemCategoryFilter itemCategory)
@@ -549,6 +556,7 @@ namespace Stellogistics
             }
             RefreshCustomPickerCells();
             RefreshOptionsMenuState();
+            PrewarmAllPanelTexts();
             _forceRefresh = true;
         }
 

@@ -816,14 +816,47 @@ namespace Stellogistics
             Text txt = go.GetComponent<Text>();
             txt.font = _gameFont;
             txt.fontSize = fontSize;
-            txt.fontStyle = style;
+            txt.fontStyle = ModLocalization.EffectiveFontStyle(style);
             txt.alignment = align;
             txt.color = color;
             txt.supportRichText = true;
             txt.horizontalOverflow = HorizontalWrapMode.Overflow;
             txt.verticalOverflow = VerticalWrapMode.Overflow;
             txt.raycastTarget = false;
+            _allPanelTexts.Add(new TrackedPanelText { Text = txt, BaseStyle = style });
             return txt;
+        }
+
+        private void PrewarmAllPanelTexts()
+        {
+            for (int i = _allPanelTexts.Count - 1; i >= 0; i--)
+            {
+                TrackedPanelText entry = _allPanelTexts[i];
+                if (entry.Text == null)
+                {
+                    _allPanelTexts.RemoveAt(i);
+                    continue;
+                }
+
+                FontStyle targetStyle = ModLocalization.EffectiveFontStyle(entry.BaseStyle);
+                if (entry.Text.fontStyle != targetStyle)
+                {
+                    entry.Text.fontStyle = targetStyle;
+                }
+
+                if (!string.IsNullOrEmpty(entry.Text.text))
+                {
+                    // Querying preferredWidth outside CanvasUpdateRegistry.PerformUpdate() forces
+                    // DSP's custom Youthcat.TextGenerator to update m_LCID, resolve m_ReplacedFont
+                    // for the active language, and populate the dynamic font texture atlas while
+                    // IsRebuildingGraphics() is false (preventing re-entrant UpdateGeometry() calls
+                    // inside FontTextureChanged() from corrupting Graphic.workerMesh).
+                    _ = entry.Text.preferredWidth;
+                }
+
+                entry.Text.SetAllDirty();
+                entry.Text.UpdateMaterial();
+            }
         }
     }
 }

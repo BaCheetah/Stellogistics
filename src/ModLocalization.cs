@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Stellogistics
 {
@@ -22,6 +23,13 @@ namespace Stellogistics
                 EModLanguage lang = CurrentLanguage;
                 return lang == EModLanguage.Chinese || lang == EModLanguage.Japanese;
             }
+        }
+
+        public static FontStyle EffectiveFontStyle(FontStyle baseStyle)
+        {
+            // DSP's CJK font already has a medium-heavy stroke weight; synthesized Bold/Italic
+            // smears multi-stroke Hanzi/Kanji glyphs and makes them look overly thick.
+            return IsCJK ? FontStyle.Normal : baseStyle;
         }
 
         public static EModLanguage GetLanguage()

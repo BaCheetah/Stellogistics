@@ -28,6 +28,7 @@ namespace Stellogistics
             _scrollViewportRect.sizeDelta = new Vector2(0f, emptyViewportHeight);
             _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + emptyViewportHeight);
             _resizeGripGo.transform.SetAsLastSibling();
+            PrewarmAllPanelTexts();
         }
 
         private void LayoutSections<T>(
@@ -142,6 +143,7 @@ namespace Stellogistics
             _scrollViewportRect.sizeDelta = new Vector2(0f, viewportHeight);
             _panelRect.sizeDelta = new Vector2(panelWidth, activeHeaderH + viewportHeight);
             _resizeGripGo.transform.SetAsLastSibling();
+            PrewarmAllPanelTexts();
         }
 
         private void RenderSummary(LogisticsSummary summary)

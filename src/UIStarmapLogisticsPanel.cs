@@ -76,9 +76,17 @@ namespace Stellogistics
             public Outline CellOutline;
         }
 
+        private struct TrackedPanelText
+        {
+            public Text Text;
+            public FontStyle BaseStyle;
+        }
+
         private StellogisticsConfig _config;
         private UIGame _uiGame;
         private Font _gameFont;
+        private readonly List<TrackedPanelText> _allPanelTexts = new List<TrackedPanelText>();
+        private int _languageSwitchWarmupFrames;
 
         private RectTransform _panelRect;
         private RectTransform _headerRect;
@@ -251,6 +259,24 @@ namespace Stellogistics
 
         private static int CurrentGalaxySeed => GameMain.galaxy != null ? GameMain.galaxy.seed : 0;
 
+        private Font ResolveCurrentGameFont()
+        {
+            Font font = null;
+            if (_uiGame?.planetDetail?.typeText != null)
+            {
+                font = _uiGame.planetDetail.typeText.font;
+            }
+            else if (_uiGame?.starmap?.cursorViewText != null)
+            {
+                font = _uiGame.starmap.cursorViewText.font;
+            }
+            if (font == null)
+            {
+                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
+            return font;
+        }
+
         public void Initialize(UIGame uiGame, StellogisticsConfig config)
         {
             _uiGame = uiGame;
@@ -258,18 +284,7 @@ namespace Stellogistics
             _livePanelWidth = _config.PanelWidth.Value;
             _livePanelMaxHeight = _config.PanelMaxHeight.Value;
 
-            if (_uiGame.planetDetail != null && _uiGame.planetDetail.typeText != null)
-            {
-                _gameFont = _uiGame.planetDetail.typeText.font;
-            }
-            else if (_uiGame.starmap != null && _uiGame.starmap.cursorViewText != null)
-            {
-                _gameFont = _uiGame.starmap.cursorViewText.font;
-            }
-            if (_gameFont == null)
-            {
-                _gameFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            }
+            _gameFont = ResolveCurrentGameFont();
 
             BuildUI();
             BuildOptionsMenu();
@@ -277,6 +292,7 @@ namespace Stellogistics
             BuildCustomItemPicker();
             _lastLanguageLcid = Localization.CurrentLanguageLCID;
             ApplyLocalizedStaticLabels();
+            _languageSwitchWarmupFrames = 2;
         }
 
         public void OnStarmapOpened()
@@ -351,18 +367,23 @@ namespace Stellogistics
             }
 
             int currentLcid = Localization.CurrentLanguageLCID;
-            if (currentLcid != _lastLanguageLcid)
+            bool languageChanged = currentLcid != _lastLanguageLcid;
+            if (languageChanged)
             {
                 _lastLanguageLcid = currentLcid;
                 LogisticsAggregator.InvalidateCaches();
-                ApplyLocalizedStaticLabels();
                 _forceRefresh = true;
+                _languageSwitchWarmupFrames = 3;
             }
 
             ResolveTarget(starmap, out PlanetData targetPlanet, out StarData targetStar);
 
             if (!_finderModeActive && targetPlanet == null && targetStar == null)
             {
+                if (languageChanged)
+                {
+                    ApplyLocalizedStaticLabels();
+                }
                 if (gameObject.activeSelf)
                 {
                     gameObject.SetActive(false);
@@ -382,6 +403,11 @@ namespace Stellogistics
             if (!gameObject.activeSelf)
             {
                 gameObject.SetActive(true);
+            }
+
+            if (languageChanged)
+            {
+                ApplyLocalizedStaticLabels();
             }
 
             UpdatePanelPosition();
@@ -433,6 +459,12 @@ namespace Stellogistics
 
                     RenderSummary(summary);
                 }
+            }
+
+            if (_languageSwitchWarmupFrames > 0)
+            {
+                _languageSwitchWarmupFrames--;
+                PrewarmAllPanelTexts();
             }
         }
 

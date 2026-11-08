@@ -801,6 +801,8 @@ namespace Stellogistics
             {
                 RefreshGeneralOptionsMenuState();
             }
+
+            PrewarmAllPanelTexts();
         }
     }
 }
