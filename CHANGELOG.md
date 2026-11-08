@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.3
+- **Fixed Live Language Switching & Font Fallback Resolution**:
+  - Fixed blank text after switching languages live in-game by cleanly recreating the Starmap panel when `Localization.CurrentLanguageLCID` changes and adding a multi-step font fallback chain (`UIStarmap.cursorViewText`, `UIPlanetDetail.typeText`, `UIControlPanelWindow.FONT_SAIRASB`, `Resources.Load<Font>("UI/Fonts/SAIRASB")`, `"UI/Fonts/SAIRAR"`, `Configs.builtin.markerBreifInfoWordFont`, and Unity 2022's `"LegacyRuntime.ttf"`).
+- **Improved CJK Typography (`简体中文` & `日本語`)**:
+  - Uses normal font weight (`FontStyle.Normal`) instead of synthesized bold/italic when Simplified Chinese or Japanese is active so multi-stroke CJK characters remain crisp and legible.
+
 ## 2.2.2
 - **README & Documentation Cleanup**:
   - Moved the Simplified Chinese (`简体中文`) and Japanese (`日本語`) overview sections above `Configuration` and `Source Code & How to Compile Yourself`, keeping `Configuration` and build instructions at the bottom of `README.md`, and streamlined repository link references.
