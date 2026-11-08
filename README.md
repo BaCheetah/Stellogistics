@@ -26,11 +26,12 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
 ### 1. Combined Planet & Star System Logistics
 - **One Row Per Item**: Combines all Remote Supply (**Exports**) and Remote Demand (**Imports**) slots for the same item across the selected Planet or Star System.
 - **Complete Capacity & Hatched `+In-Transit` Breakdown**: Shows `Stored / Max` capacity, fill percentage, a **diagonal hatched bar extension** for inbound vessel cargo (`+In-Transit`), number of planets involved, and total station slots (`ILS` + Gas Giant Orbital Collectors `OC`).
-- **Fleet & Warper Readiness**: Header displays total ILS & Orbital Collector counts, idle vs. total Logistics Vessels, and available Space Warpers.
+- **Fleet & Warper Readiness**: Header displays total ILS & Orbital Collector counts, active `on route` (or `idle`, toggleable by clicking the text) vs. total Logistics Vessels, and available Space Warpers.
 
 ### 2. Galaxy Item & Bottleneck Finder (`Finder`)
 - **Cluster-Wide Search & Bottleneck Scanner**: Locate every planet exporting or importing checked items across the entire star cluster, or use the `Exclude >40% (Healthy)` filter in **`Filter ▾`** to scan all checked items for shortages (`EMPTY`, `STARVED`, `LOW`).
-- **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← All`** to return to your Finder overview.
+- **Click-to-Focus & Starmap Pin**: Click any planet row in the Finder to automatically focus that planet on the Starmap and set your yellow navigation indicator line. Click any item row to drill down to that item, and use **`← Back`** / **`← All`** to step back through your Finder history.
+- **Upstream Recipe Source Navigation (Click Item Icon)**: Click any craftable item's icon on a Finder row to automatically filter the Finder to the source ingredients that craft that item (resolved dynamically from DSP's recipe database), and step back up the production chain level-by-level with **`← Back`**.
 - **Inline Item Dismiss (`✕`) & Planet Ignore Filter**: Hover any row in the Planet/Star overview or Finder to reveal the slide-in **`✕`** button and uncheck that item in the Picker, or exclude entire planets/star systems via the **`Planets`** tab in the Picker or **`Filter ▾`**.
 
 ### 3. Instant Bottleneck, Throughput & Hub Detection
@@ -52,12 +53,12 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
 - **`All Slots`**: Displays every remote supply and demand slot across all planets in the system.
 
 ### 5. Unified Item, Building & Planet Picker (`Filter ▾ → Custom Picker`)
-- **6 Quick Category Checkboxes & Threshold Filter**: Quickly toggle item categories or hide full/tapped/healthy storages (`≥90%` / `100%` / `>40%`) across both normal Starmap views and the Galaxy Finder.
+- **6 Tri-State Category Checkboxes & Threshold Filter**: Quickly toggle item categories (with a half-active `–` indicator when individual items are customized) or hide full/tapped/healthy storages (`≥90%` / `100%` / `>40%`) across both normal Starmap views and the Galaxy Finder.
 - **Unified `14 × 8` Picker (`Items`, `Buildings`, `Planets`)**:
   - One identical, spoiler-free picker window across both Starmap filtering and the Galaxy Finder, with **`✓ Check All`** and **`✕ Uncheck All`** controls and clear visual contrast between active and dimmed items.
 
 ### 6. Flexible Window Management & `Options ▾`
-- **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), Starmap hover behavior, choose a Task Manager-style **Refresh Rate** (`Fast`, `Medium`, `Slow`, `Paused`), or reset UI position and size.
+- **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), `Switch to Planet / System on Hover`, choose a Task Manager-style **Refresh Rate** (`Live`, `Medium`, `Slow`, `Paused`), or reset UI position and size.
 - **Freely Draggable & Resizable (`◢`)**:
   - Supports custom heights (including intentional empty space without snapping back), responsive two-row header button stacking at narrow widths, and multi-stage drag collapsing into a compact **`Stellogistics` taskbar tab**.
 
@@ -96,7 +97,7 @@ If you prefer to inspect the code and compile the `.dll` yourself rather than us
 3. **Locate the compiled output**:
    - **Compiled Plugin DLL**: `bin/Release/net472/Stellogistics.dll`
    - **Thunderstore-Ready Folder**: `dist/package/`
-   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.1.4.zip`
+   - **Thunderstore Mod Manager ZIP**: `dist/Stellogistics-2.2.0.zip`
 
 4. **Install manually**:
-   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.1.4.zip` as a local mod in Thunderstore Mod Manager / r2modman).
+   - Copy `Stellogistics.dll` into your `BepInEx/plugins/Stellogistics/` folder (or import `dist/Stellogistics-2.2.0.zip` as a local mod in Thunderstore Mod Manager / r2modman).

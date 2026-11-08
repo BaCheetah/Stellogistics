@@ -115,8 +115,8 @@ namespace Stellogistics
             IncludeOrbitalCollectors = config.Bind(
                 "Logistics",
                 "IncludeOrbitalCollectors",
-                true,
-                "Include Gas Giant Orbital Collectors (Hydrogen, Deuterium, Fire Ice) in Exports."
+                false,
+                "Include Gas Giant Orbital Collectors (Hydrogen, Deuterium, Fire Ice) in Exports (Default: false)."
             );
 
             StarSystemFilterMode = config.Bind(

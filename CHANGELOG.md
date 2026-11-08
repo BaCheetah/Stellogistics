@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.0
+- **Upstream Recipe Chain Navigation in Finder (Click Item Icon)**:
+  - Clicking any craftable item's icon on a Finder row dynamically queries *Dyson Sphere Program*'s `LDB` recipe tables (`maincraft` & alternate recipes) and automatically filters the Finder to that item's source ingredients (e.g., clicking *Proliferator Mk.III* filters to *Proliferator Mk.II + Carbon Nanotube*).
+  - **Multi-Level Finder History Stack (`← Back`)**: Every icon-click or single-item drill-down pushes the previous Finder state and filter snapshot onto a history stack, allowing `← Back` to step up one recipe/filter level at a time inside the Finder and automatically restore your original filter.
+- **Tri-State Category Checkboxes (`Filter ▾`)**:
+  - Category checkboxes in `Filter ▾` now display a half-active indicator (`–`) when only a subset of items in that category is enabled via the Custom Picker, recipe source navigation, or the inline row `✕` mute button.
+- **Clickable `Vessels` Display (`on route` / `idle`)**:
+  - The header `Vessels` readout now defaults to showing active ships `on route` and can be stealthily clicked to toggle between `on route` and `idle`.
+- **Updated `Options ▾` Defaults, Labels & Refresh Rates**:
+  - Defaulted `Include Orbital Collectors (OC)` to `false` (disabled by default).
+  - Renamed the Starmap hover option to `Switch to Planet / System on Hover`.
+  - Updated the Refresh Rate selector to `Live` (0.10s / 10 Hz), `Medium` (1.00s / 1 Hz), `Slow` (10.0s / 0.1 Hz), and `Paused`.
+
 ## 2.1.4
 - Disable auto-save per resize frame, make Finder single-item focus transient, add `EExcludeMode` & TTL caches, remove dead code, and split `UIStarmapLogisticsPanel` into partial classes.
 

@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>Stellogistics</AssemblyName>
     <Description>Shows combined Interplanetary Logistics (ILS) imports and exports per planet and star system on the Starmap.</Description>
-    <Version>2.1.4</Version>
+    <Version>2.2.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

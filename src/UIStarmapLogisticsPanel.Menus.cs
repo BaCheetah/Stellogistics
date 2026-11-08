@@ -259,7 +259,7 @@ namespace Stellogistics
 
             _generalOptionToggles.Add(CreateGeneralOptionToggleRow(
                 _generalOptionsMenuRect,
-                "Switch to Planet on Hover",
+                "Switch to Planet / System on Hover",
                 y,
                 () => _config.ShowOnHover.Value,
                 () => _config.ShowOnHover.Value = !_config.ShowOnHover.Value
