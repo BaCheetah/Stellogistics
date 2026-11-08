@@ -241,18 +241,11 @@ namespace Stellogistics
 
             float panelWidth = _isResizing ? _livePanelWidth : _config.PanelWidth.Value;
             float maxScrollHeight = _isResizing ? _livePanelMaxHeight : _config.PanelMaxHeight.Value;
-            bool showPlanetExitBtn = _finderHistoryStack.Count > 0 || _finderFocusItemId > 0;
-            float activeHeaderH = ApplyHeaderLayout(panelWidth, showPlanetExitBtn);
+            float activeHeaderH = ApplyHeaderLayout(panelWidth, false);
 
             _subtitleText.gameObject.SetActive(true);
             _fleetInfoText.gameObject.SetActive(true);
-
-            _filterModeBtn.gameObject.SetActive(showPlanetExitBtn);
-            if (showPlanetExitBtn)
-            {
-                _filterModeBtnText.text = "↩ Planet";
-                if (_filterModeBtnBg != null) _filterModeBtnBg.color = new Color(0.18f, 0.32f, 0.48f, 0.96f);
-            }
+            _filterModeBtn.gameObject.SetActive(false);
 
             _finderModeBtn.gameObject.SetActive(true);
             _lastFinderCheckedCount = summary.CheckedItemCount;

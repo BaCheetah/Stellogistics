@@ -179,9 +179,7 @@ namespace Stellogistics
         private int _lastFinderCheckedCount = 0;
         private readonly List<FinderHistoryEntry> _finderHistoryStack = new List<FinderHistoryEntry>();
 
-        private bool ShowFifthHeaderButton => _finderModeActive
-            ? (_finderHistoryStack.Count > 0 || _finderFocusItemId > 0)
-            : (_lastResolvedStar != null && _lastResolvedPlanet == null);
+        private bool ShowFifthHeaderButton => !_finderModeActive && (_lastResolvedStar != null && _lastResolvedPlanet == null);
 
         private int _lastTargetAstroId = -1;
         private int _lastGalaxySeed = 0;

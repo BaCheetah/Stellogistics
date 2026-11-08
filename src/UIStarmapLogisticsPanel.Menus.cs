@@ -416,12 +416,6 @@ namespace Stellogistics
         private void OnFilterModeButtonClicked()
         {
             CloseDropdownMenus();
-            if (_finderModeActive)
-            {
-                ExitFinderToPlanetOverview();
-                return;
-            }
-
             int next = ((int)_config.StarSystemFilterMode.Value + 1) % 3;
             _config.StarSystemFilterMode.Value = (EStarFilterMode)next;
             _config.Save();
