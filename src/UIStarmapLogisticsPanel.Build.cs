@@ -502,21 +502,6 @@ namespace Stellogistics
             alertText.rectTransform.offsetMax = new Vector2(-10f, 0f);
         }
 
-        private ItemRowView GetOrCreateRow(int index)
-        {
-            while (_rowPool.Count <= index)
-            {
-                _rowPool.Add(CreateRowWidget(_rowPool.Count));
-            }
-            ItemRowView row = _rowPool[index];
-            if (!row.RootGo.activeSelf)
-            {
-                row.MuteSlideProgress = 0f;
-                row.RootGo.SetActive(true);
-            }
-            return row;
-        }
-
         private ItemRowView CreateRowWidget(int index)
         {
             GameObject rowGo = new GameObject($"ItemRow_{index}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(PointerHoverTracker));

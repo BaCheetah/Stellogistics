@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.4
+- **ILS Energy Bottleneck Indicator (`⚡+MW`)**:
+  - Importing rows that still have idle vessels but whose ILS lacks the stored energy for even the cheapest in-range trip (`CalcTripEnergyCost`, recharge > ~3 s) now show `⚡+MW` instead of `⚡+ILS`, telling you to raise the station's max charging power instead of building more ILS or vessels.
+- **Calm Row Ordering in `Live` Refresh**:
+  - **Sort Hysteresis**: Rows only swap places when their fill level moved by at least 5 percentage points or their health status (Healthy / Warning / Critical) changed, so near-equal items no longer flicker back and forth.
+  - **Decoupled Re-Sort Cadence**: Bars and numbers stay live, but the row order is recomputed at most every 2 s (status changes re-sort immediately).
+  - **Hover Freeze**: The row order is frozen while the pointer is over the panel, so rows never jump away from under the cursor.
+  - **Glide Animations**: Rows are now bound to their item (and planet in the Finder) and smoothly glide to their new position when re-sorted, making it easy to follow which item moved where.
+
 ## 2.2.3
 - **Fixed Live Language Switching & Font Fallback Resolution**:
   - Fixed blank text after switching languages live in-game by cleanly recreating the Starmap panel when `Localization.CurrentLanguageLCID` changes and adding a multi-step font fallback chain (`UIStarmap.cursorViewText`, `UIPlanetDetail.typeText`, `UIControlPanelWindow.FONT_SAIRASB`, `Resources.Load<Font>("UI/Fonts/SAIRASB")`, `"UI/Fonts/SAIRAR"`, `Configs.builtin.markerBreifInfoWordFont`, and Unity 2022's `"LegacyRuntime.ttf"`).

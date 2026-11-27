@@ -15,7 +15,7 @@ namespace Stellogistics
         {
             _exportsHeaderGo.SetActive(false);
             _importsHeaderGo.SetActive(false);
-            HideRowsFrom(0);
+            ReleaseAllRows();
 
             _emptyStateGo.SetActive(true);
             _emptyStateText.text = message;
@@ -43,9 +43,25 @@ namespace Stellogistics
             float panelWidth,
             float maxScrollHeight,
             float activeHeaderH,
+            Func<T, long> keyOf,
+            Func<T, CombinedLogisticsItem> itemOf,
             Action<ItemRowView, T, float, int, int> bindAction)
         {
             _emptyStateGo.SetActive(false);
+            _layoutStamp++;
+            _config.GetValidatedThresholds(out int critPct, out int warnPct);
+
+            BeginOrderingPass(out bool reorderDue, out bool frozen);
+            var orderedExports = new List<T>(exports.Count);
+            var orderedImports = new List<T>(imports.Count);
+            bool reordered = StabilizeOrder(exports, 0, keyOf, itemOf, reorderDue, frozen, critPct, warnPct, orderedExports);
+            reordered |= StabilizeOrder(imports, 1, keyOf, itemOf, reorderDue, frozen, critPct, warnPct, orderedImports);
+            if (reordered)
+            {
+                _nextReorderTime = Time.unscaledTime + ReorderMinInterval;
+            }
+            exports = orderedExports;
+            imports = orderedImports;
 
             float estimatedHeight = 0f;
             if (exports.Count > 0)
@@ -77,7 +93,6 @@ namespace Stellogistics
 
             float cursorY = 0f;
             int rowIndex = 0;
-            _config.GetValidatedThresholds(out int critPct, out int warnPct);
 
             if (exports.Count > 0)
             {
@@ -91,10 +106,11 @@ namespace Stellogistics
 
                 if (!_exportsCollapsed)
                 {
+                    float sectionBaseY = cursorY;
                     for (int i = 0; i < exports.Count; i++)
                     {
-                        ItemRowView row = GetOrCreateRow(rowIndex++);
-                        row.RootRect.anchoredPosition = new Vector2(0f, -cursorY);
+                        ItemRowView row = AcquireRow(0, keyOf(exports[i]), out bool fresh);
+                        PlaceRow(row, sectionBaseY, i, rowIndex++, fresh);
                         bindAction(row, exports[i], rowAvailableWidth, critPct, warnPct);
                         cursorY += RowHeight + RowSpacing;
                     }
@@ -121,10 +137,11 @@ namespace Stellogistics
 
                 if (!_importsCollapsed)
                 {
+                    float sectionBaseY = cursorY;
                     for (int i = 0; i < imports.Count; i++)
                     {
-                        ItemRowView row = GetOrCreateRow(rowIndex++);
-                        row.RootRect.anchoredPosition = new Vector2(0f, -cursorY);
+                        ItemRowView row = AcquireRow(1, keyOf(imports[i]), out bool fresh);
+                        PlaceRow(row, sectionBaseY, i, rowIndex++, fresh);
                         bindAction(row, imports[i], rowAvailableWidth, critPct, warnPct);
                         cursorY += RowHeight + RowSpacing;
                     }
@@ -135,7 +152,8 @@ namespace Stellogistics
                 _importsHeaderGo.SetActive(false);
             }
 
-            HideRowsFrom(rowIndex);
+            ReleaseUnusedRows();
+            _snapRowsThisLayout = false;
 
             SetScrollbarActive(needsScrollbar);
             _scrollContentRect.anchoredPosition = new Vector2(0f, _scrollContentRect.anchoredPosition.y);
@@ -217,6 +235,8 @@ namespace Stellogistics
                 panelWidth,
                 maxScrollHeight,
                 activeHeaderH,
+                item => RowKeyOf(item),
+                item => item,
                 (row, item, rowW, cPct, wPct) => BindRow(row, item, isStar, rowW, cPct, wPct)
             );
         }
@@ -317,6 +337,8 @@ namespace Stellogistics
                 panelWidth,
                 maxScrollHeight,
                 activeHeaderH,
+                entry => RowKeyOf(entry),
+                entry => entry.Item,
                 (row, entry, rowW, cPct, wPct) => BindPlanetLocationRow(row, entry, isBottleneck, rowW, cPct, wPct)
             );
         }
@@ -513,15 +535,5 @@ namespace Stellogistics
             row.BoundIsBottleneckScan = isBottleneckScan;
         }
 
-        private void HideRowsFrom(int startIndex)
-        {
-            for (int i = startIndex; i < _rowPool.Count; i++)
-            {
-                if (_rowPool[i].RootGo.activeSelf)
-                {
-                    _rowPool[i].RootGo.SetActive(false);
-                }
-            }
-        }
     }
 }

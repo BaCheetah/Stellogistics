@@ -37,6 +37,16 @@ namespace Stellogistics
             public PlanetData BoundPlanet;
             public bool BoundIsFinderRow;
             public bool BoundIsBottleneckScan;
+
+            // Key-based pooling & reorder glide animation (see UIStarmapLogisticsPanel.Ordering.cs)
+            public bool InUse;
+            public int AnimSection;
+            public long AnimKey;
+            public int UsedStamp;
+            public float SectionBaseY;
+            public float TargetOffset;
+            public float CurrentOffset;
+            public float OffsetVelocity;
         }
 
         private class PlanetFilterRowView
@@ -481,6 +491,8 @@ namespace Stellogistics
                     RenderSummary(summary);
                 }
             }
+
+            UpdateRowPositionAnimations();
 
             if (_languageSwitchWarmupFrames > 0)
             {

@@ -61,6 +61,7 @@ When viewing a whole **Star System**, cycle between three aggregation modes:
 
 ### 6. Flexible Window Management & `Options ▾`
 - **Dedicated `Options ▾` Menu**: Toggle the hatched `+In-Transit` bar, Gas Giant Orbital Collectors (`OC`), `Switch to Planet / System on Hover`, choose a Task Manager-style **Refresh Rate** (`Live`, `Medium`, `Slow`, `Paused`), or reset UI position and size.
+- **Calm Live Sorting**: Rows re-sort with hysteresis (±5 %), at most every 2 s, freeze while you hover the panel, and glide smoothly to their new position so you can follow which item moved where.
 - **Freely Draggable & Resizable (`◢`)**:
   - Supports custom heights (including intentional empty space without snapping back), responsive two-row header button stacking at narrow widths, and multi-stage drag collapsing into a compact **`Stellogistics` taskbar tab**.
 
