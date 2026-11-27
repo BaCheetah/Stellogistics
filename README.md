@@ -41,6 +41,8 @@ In mid-to-late game *Dyson Sphere Program*, a single star system can easily host
   - **Green (>40%)**: Healthy buffer.
 - **Logistics / Vessel Throughput Bottleneck Indicator (`⚡+ILS`)**:
   - Automatically flags importing planets (`⚡+ILS`) whose storage + inbound vessels (`+In-Transit` hatched bar) do not fill capacity while healthy/unclaimed export stock is sitting ready on another planet in the cluster—telling you immediately when you need another importing ILS tower or more vessels rather than more production.
+- **ILS Energy Bottleneck Indicator (`⚡+MW`)**:
+  - Replaces `⚡+ILS` when the importing ILS still has idle vessels but its stored energy cannot cover the trip energy cost of even the nearest paired supplier (long-distance/warp trips) and recharging takes longer than ~3 s—telling you to raise the station's max charging power instead of building more ILS or vessels.
 - **Planet & System Hub Detection (`⇄ Hub`)**:
   - Automatically detects planets that both import and export the same item and displays a `⇄ Hub (Imp ...)` / `⇄ Hub (Exp ...)` badge with the counterpart capacity right on the row.
 - **Section Header Alert Counters**: Even when the Exports or Imports sections are collapsed, the header displays instant alert tallies (e.g., `2 EMPTY • 1 LOW`).

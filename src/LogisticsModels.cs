@@ -30,6 +30,11 @@ namespace Stellogistics
         public long HubCounterpartMax;
         public bool HasLogisticsBottleneck;
 
+        // Demand slots whose ILS has idle vessels but not enough stored energy (and too slow charging)
+        // to pay the trip energy cost of even its cheapest in-range remote pair.
+        public int EnergyStarvedSlotCount;
+        public bool HasEnergyBottleneck;
+
         public float FillRatio
         {
             get

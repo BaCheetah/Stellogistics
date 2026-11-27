@@ -8,6 +8,9 @@ namespace Stellogistics
     {
         private const double OneLightYearMeters = 2_390_000.0;
         private const int WarperItemId = 1210;
+        // Recharge time (game ticks, 60/s) above which a missing trip energy budget counts as a real bottleneck
+        // instead of the short dip right after a vessel was dispatched.
+        private const long EnergyStarvedMinChargeTicks = 180;
 
         private struct SupplyAvailability
         {
@@ -308,7 +311,11 @@ namespace Stellogistics
                     }
                     else if (store.remoteLogic == ELogisticStorage.Demand)
                     {
-                        AccumulateSlot(importsByItem, importPlanetsByItem, planet.id, store, station.isCollector, hasExternalPair);
+                        CombinedLogisticsItem imp = AccumulateSlot(importsByItem, importPlanetsByItem, planet.id, store, station.isCollector, hasExternalPair);
+                        if (imp != null && store.count < store.max && IsDemandSlotEnergyStarved(station, s, gStationPool))
+                        {
+                            imp.EnergyStarvedSlotCount++;
+                        }
                     }
                 }
             }
@@ -379,7 +386,87 @@ namespace Stellogistics
             }
         }
 
-        private static void AccumulateSlot(
+        /// <summary>
+        /// Returns true when the ILS owning this Demand slot has idle vessels (so the shortage is NOT caused by
+        /// all ships being on route) but cannot afford the trip energy of even its cheapest in-range remote pair,
+        /// and recharging would take longer than <see cref="EnergyStarvedMinChargeTicks"/> at its current
+        /// charging power. Mirrors the game's dispatch check (<c>energy &gt;= CalcTripEnergyCost(trip, sailSpeed, canWarp)</c>).
+        /// </summary>
+        private static bool IsDemandSlotEnergyStarved(StationComponent station, int slotIndex, StationComponent[] gStationPool)
+        {
+            if (station == null || station.isCollector || station.idleShipCount <= 0)
+            {
+                return false;
+            }
+
+            SupplyDemandPair[] pairs = station.remotePairs;
+            gStationPool ??= GameMain.data?.galacticTransport?.stationPool;
+            AstroData[] astros = GameMain.galaxy?.astrosData;
+            GameHistoryData history = GameMain.history;
+            if (pairs == null || gStationPool == null || astros == null || history == null)
+            {
+                return false;
+            }
+
+            int selfPlanetId = station.planetId;
+            if (selfPlanetId <= 0 || selfPlanetId >= astros.Length)
+            {
+                return false;
+            }
+
+            float sailSpeed = history.logisticShipSailSpeedModified;
+            bool canWarp = history.logisticShipWarpDrive && station.warperCount > 0;
+            int pairCount = Math.Min(station.remotePairTotalCount, pairs.Length);
+            int selfGid = station.gid;
+            long minCost = long.MaxValue;
+
+            for (int i = 0; i < pairCount; i++)
+            {
+                SupplyDemandPair pair = pairs[i];
+                if (pair.demandId != selfGid || pair.demandIndex != slotIndex)
+                {
+                    continue;
+                }
+
+                int otherGid = pair.supplyId;
+                if (otherGid <= 0 || otherGid >= gStationPool.Length)
+                {
+                    continue;
+                }
+                StationComponent other = gStationPool[otherGid];
+                if (other == null || other.gid != otherGid || other.planetId <= 0 || other.planetId >= astros.Length)
+                {
+                    continue;
+                }
+
+                AstroData a = astros[selfPlanetId];
+                AstroData b = astros[other.planetId];
+                double trip = (a.uPos - b.uPos).magnitude + a.uRadius + b.uRadius;
+                if (trip > station.tripRangeShips)
+                {
+                    continue;
+                }
+
+                long cost = station.CalcTripEnergyCost(trip, sailSpeed, canWarp);
+                if (cost < minCost)
+                {
+                    minCost = cost;
+                }
+            }
+
+            if (minCost == long.MaxValue || station.energy >= minCost)
+            {
+                return false;
+            }
+            if (station.energyMax < minCost || station.energyPerTick <= 0)
+            {
+                return true;
+            }
+            long ticksToCharge = (minCost - station.energy) / station.energyPerTick;
+            return ticksToCharge > EnergyStarvedMinChargeTicks;
+        }
+
+        private static CombinedLogisticsItem AccumulateSlot(
             Dictionary<int, CombinedLogisticsItem> dict,
             Dictionary<int, HashSet<int>> planetsByItem,
             int planetId,
@@ -425,6 +512,7 @@ namespace Stellogistics
                 planetSet.Add(planetId);
                 combined.PlanetCount = planetSet.Count;
             }
+            return combined;
         }
 
         private static void ApplyInterstellarSmartFilter(
@@ -666,7 +754,15 @@ namespace Stellogistics
                 (impItem.FillRatio + impItem.InboundTransitRatio) < 0.85f &&
                 HasExternalSupply(supplyByItem, impItem.ItemId, planetId, starId))
             {
-                impItem.HasLogisticsBottleneck = true;
+                // Idle vessels but no trip energy -> raise the ILS max charging power instead of adding ILS/vessels.
+                if (impItem.EnergyStarvedSlotCount > 0)
+                {
+                    impItem.HasEnergyBottleneck = true;
+                }
+                else
+                {
+                    impItem.HasLogisticsBottleneck = true;
+                }
             }
         }
 

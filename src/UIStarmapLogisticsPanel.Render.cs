@@ -406,9 +406,13 @@ namespace Stellogistics
             int pct = item.DisplayPercent;
             string statusTag = ModLocalization.RowStatusTag(status, item.Logic, item.StoredCount);
 
-            string bottleneckPrefix = item.HasLogisticsBottleneck
-                ? "<color=#FFD24C>⚡+ILS</color> • "
-                : "";
+            // ⚡+MW: idle vessels exist but the ILS lacks trip energy (raise max charging power).
+            // ⚡+ILS: all vessels busy / no vessel capacity (add ILS or vessels).
+            string bottleneckPrefix = item.HasEnergyBottleneck
+                ? "<color=#5CD6FF>⚡+MW</color> • "
+                : item.HasLogisticsBottleneck
+                    ? "<color=#FFD24C>⚡+ILS</color> • "
+                    : "";
 
             string transitStr = "";
             if (item.InTransitOrder != 0)
